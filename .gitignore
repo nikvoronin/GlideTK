@@ -230,6 +230,7 @@ FakesAssemblies/
 **/*.Server/GeneratedArtifacts
 **/*.Server/ModelManifest.xml
 _Pvt_Extensions
+**/*.pubxml
 
 # LightSwitch generated files
 GeneratedArtifacts/
