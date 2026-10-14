@@ -745,15 +745,20 @@ vec2 castRay(in vec3 ro, in vec3 rd)
 			overstep = h.x * min(1.0, 0.5 * h.x / phx);
 			t += h.x * 0.5 + overstep;
 			phx = h.x;
-			i++;
 		}
 		else
 		{
+			// overstepped into a shape: step back. Nothing to step back means the ray
+			// starts inside a shape, which is a hit right here (looping on would hang the GPU)
+			if (overstep <= 0.0)
+				break;
+
 			t -= overstep;
 			phx = MAX_DIST;
 			h.x = 1.0;
 			overstep = 0.0;
 		}
+		i++;
 
 		if (h.x < MIN_DIST || t > MAX_DIST)
 			break;
@@ -766,7 +771,7 @@ vec2 castRay(in vec3 ro, in vec3 rd)
 float softshadow(in vec3 ro, in vec3 rd)
 {
 	const float INIT_T = 0.02;
-	const float INIT_RES = 0.1;
+	const float INIT_RES = 0.5;			// max step: 0.1 doubles the frame time with no visible gain
 	const float MAX_DIST = 25;
 	const float MIN_DIST = 0.001;
 	const int MAX_RAY_STEPS = 256;		// higher -> longer shadow distance
