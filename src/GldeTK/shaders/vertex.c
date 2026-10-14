@@ -1,4 +1,6 @@
-﻿varying vec2 fragCoord;
+﻿#version 330 core
+
+out vec2 fragCoord;
 uniform vec3 iResolution;
 
 void main()

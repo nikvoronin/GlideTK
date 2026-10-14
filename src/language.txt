@@ -1,71 +1,49 @@
+GldeTK scene language
+=====================
+
+Scene files live in GldeTK/scenes/*.scene and are copied next to the executable.
+F5 reloads the scene at runtime. The parsed scene is compiled every physics tick
+into a vec4 program (see GldeTK/Scene/SceneOpcodes.cs), which is evaluated both by
+the CPU physics (Scene/SceneVM.cs) and by the shader (map() in shaders/fragment.c).
+
 ===PRIMITIVES
-position (vec3 pos) on the input on all elements
-	Sphera
-		vec3: pos
-		float: radius
-		
-	Plane
-		vec3: pos
-		vec3: normal
-		float: distance from the origin
-		
-	Box
-		vec3: pos
-		vec3: size
-		
-	Cylinder
-		vec3: pos
-		float: radius
-		float height
-		
-	Capsule
-		vec3: pos
-		float: r	????????/
-		float: c	?????????
-	
-	Torus
-		vec3: pos
-		float: small radius
-		float: big radius
-		
-	Cone
-		vec3: pos
-		float: radius
-		float: height
+Optional "color (r, g, b)" may follow the arguments.
 
-===DOMAIN MANIPULATION OPERATORS
-All operation return new position as vec3
-All ops input original position
+	sphere r
+	box (sx, sy, sz)			half sizes
+	plane (nx, ny, nz) dist		normal, offset along the normal
+	cylinder r halfHeight		along Y
+	torus R r					in XZ plane, big and small radius
 
-	Repeat : vec3
-		vec3: pos
-		vec3: element origin step
+===DOMAIN OPERATIONS
+Transform the position for the elements of the block, the block is a union.
 
-	Translate
+	translate (x, y, z) { ... }
+	repeat (cx, cy, cz) { ... }	period per axis, 0 disables repetition along the axis
+	rotate (degX, degY, degZ) { ... }	object rotation R = Rz * Ry * Rx
+	scale s { ... }
 
-	Rotate
+===OBJECT OPERATIONS
+	union { a b ... }
+	subtract { a b ... }		a minus all the rest
+	intersect { a b ... }
+	smooth k { a b ... }		smooth union with radius k
 
-	Scale
-	
-	Mirror
+The top level of a file is an implicit union.
 
-	Replect
+===EXPRESSIONS
+	numbers, t (physics time in seconds), pi
+	+ - * /, unary minus, parentheses
+	sin(x) cos(x) abs(x) min(a, b) max(a, b)
 
-===OBJECT MANIPULATION OPERATORS
-All operation return distance as float
-All ops input original position
+Arguments of an element are separated by spaces, so arithmetic in a separate
+argument must be parenthesized: sphere (1 + 0.2 * sin(t)).
+Inside a vector any expression is allowed: repeat (10, 10 + sin(t), 10) { ... }
 
-	Union : float
-		float: object 1
-		float: object 2
+Comments start with # and last to the end of the line.
 
-	Substraction : float
-		float: object 1
-		float: object 2
-
-	Intersection : float
-		float: object 1
-		float: object 2
-
-	...Camfer
-	...Round
+===EXAMPLE
+	plane (0, 1, 0) 0
+	repeat (10, 10 + sin(t), 10) { sphere 1 color (1, 0.55, 0.45) }
+	subtract { box (2, 2, 2)  translate (0, 1, 0) { sphere 2.5 } }
+	smooth 0.5 { sphere 1  rotate (0, 90, 0) { torus 1 0.2 } }

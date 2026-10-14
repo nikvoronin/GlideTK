@@ -1,16 +1,13 @@
 ﻿using System;
 
-namespace GldeTK
+namespace GldeTK;
+
+static class Program
 {
-    static class Program
+    [STAThread]
+    static void Main()
     {
-        [STAThread]
-        static void Main()
-        {
-            using (MainWindow mainWindow = new MainWindow())
-            {
-                mainWindow.Run();
-            }
-        }
+        using var mainWindow = new MainWindow();
+        mainWindow.Run();
     }
 }

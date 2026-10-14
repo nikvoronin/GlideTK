@@ -1,150 +1,154 @@
-﻿using OpenTK;
-using OpenTK.Input;
-using System;
-using System.Timers;
+﻿using GldeTK.Scene;
+using OpenTK.Mathematics;
+using OpenTK.Windowing.Common;
+using OpenTK.Windowing.Desktop;
+using OpenTK.Windowing.GraphicsLibraryFramework;
 
-namespace GldeTK
+namespace GldeTK;
+
+public class MainWindow : GameWindow
 {
-    public class MainWindow : GameWindow
+    readonly Camera camera;
+    readonly FpsController motionCtrl;
+    readonly SceneState scene;
+    readonly Physics physics;
+    readonly Render render;
+
+    public MainWindow()
+        : base(
+            new GameWindowSettings { UpdateFrequency = Const.PHYSICS_UPDATE_FREQUENCY },
+            new NativeWindowSettings
+            {
+                Title = Const.APP_NAME,
+                ClientSize = new Vector2i(Const.DISPLAY_XGA_W, Const.DISPLAY_XGA_H),
+                APIVersion = new System.Version(3, 3),
+                Profile = ContextProfile.Core,
+            })
     {
-        Camera camera;
-        FpsController motionCtrl;
-        Physics physics;
-        Render render;
+        VSync = VSyncMode.Adaptive;
 
-        Timer inputUpdateTimer;
+        render = new Render();
 
-        public MainWindow()
+        camera = new Camera(
+            new Vector3(3, 1, 0),
+            new Vector3(-1, 0, 0),
+            new Vector3(0, 1, 0));
+
+        scene = new SceneState(Const.SCENE_FILENAME);
+        physics = new Physics(scene);
+        motionCtrl = new FpsController();
+    }
+
+    protected override void OnUpdateFrame(FrameEventArgs e)
+    {
+        base.OnUpdateFrame(e);
+
+        float delta = (float)e.Time;
+        physics.GlobalTime += delta;
+
+        // scene is evaluated once per tick, physics and the next rendered frames use the same data
+        scene.Update(physics.GlobalTime);
+
+        // update player input (keyboard_wasd+space+shift + mouse-look)
+        Ray motionStep = motionCtrl.Update(delta, camera.RayCopy, KeyboardState, MouseState);
+
+        // gravity free fall
+        Vector3 freeFallVector = physics.Gravity(
+            delta,
+            camera.RayCopy,
+            Const.PLAYER_HIT_RADIUS,
+            motionStep.Origin.Y > 0
+            );
+
+        motionStep.Origin += freeFallVector;
+
+        // wall collide
+        float sd = physics.CastRay(
+            camera.Origin,
+            Vector3.NormalizeFast(motionStep.Origin)
+            );
+
+        // when hit the wall
+        if (sd <= Const.PLAYER_HIT_RADIUS)
         {
-            Title = Const.APP_NAME;
-            VSync = VSyncMode.Adaptive;
-            Width = Const.DISPLAY_XGA_W;
-            Height = Const.DISPLAY_XGA_H;
+            camera.Target = motionStep.Target;    // view only
+            // smooth wall sliding
+            Vector3 hitPoint = camera.Origin + motionStep.Origin * Const.PLAYER_HIT_RADIUS;
+            Vector3 norm = physics.GetSurfaceNormal(hitPoint);
+            Vector3 invNorm = -norm;
+            invNorm *= (motionStep.Origin * norm).LengthFast;
 
-            render = new Render();
-
-            camera = new Camera(
-                    new Vector3(3, 1, 0),
-                    new Vector3(-1, 0, 0),
-                    new Vector3(0, 1, 0)
-                    );
-
-            physics = new Physics();
-            motionCtrl = new FpsController();
-
-            inputUpdateTimer = new Timer(Const.INPUT_UPDATE_INTERVAL);
-            inputUpdateTimer.Elapsed += UpdateInput;
-            lastTicks = DateTime.Now.Ticks;
-            inputUpdateTimer.Enabled = true;
+            motionStep.Origin -= invNorm;
         }
 
-        long lastTicks;
-        private void UpdateInput(object sender, ElapsedEventArgs e)
+        camera.Translate(motionStep);
+
+        UpdateWindowKeys(KeyboardState);
+    }
+
+    protected override void OnLoad()
+    {
+        base.OnLoad();
+        CursorState = CursorState.Grabbed;
+        render.Start();
+    }
+
+    protected override void OnResize(ResizeEventArgs e)
+    {
+        base.OnResize(e);
+        render.OnResize(FramebufferSize.X, FramebufferSize.Y);
+    }
+
+    private void UpdateWindowKeys(KeyboardState keyboard)
+    {
+        if (keyboard.IsKeyDown(Const.INPUT_KEY_EXIT))
+            Close();
+
+        if (keyboard.IsKeyPressed(Const.INPUT_KEY_RELOAD_SCENE))
+            scene.Reload();
+
+        if (keyboard.IsKeyPressed(Const.INPUT_KEY_FULLSCREEN))
         {
-            float delta = (e.SignalTime.Ticks - lastTicks) / 10000000.0f;
-            lastTicks = e.SignalTime.Ticks;
-            physics.GlobalTime += delta;
+            WindowState = WindowState == WindowState.Fullscreen
+                ? WindowState.Normal
+                : WindowState.Fullscreen;
+        }
+    }
 
-            // update player input (keyboard_wasd+space+shift + mouse-look)
-            Ray motionStep = motionCtrl.Update(delta, camera.RayCopy);
+    double s1_timer = 0;    // smooth fps printing
 
-            // gravity free fall
-            Vector3 freeFallVector = physics.Gravity(
-                delta,
-                camera.RayCopy,
-                Const.PLAYER_HIT_RADIUS,
-                motionStep.Origin.Y > 0
-                );
+    protected override void OnRenderFrame(FrameEventArgs e)
+    {
+        base.OnRenderFrame(e);
 
-            motionStep.Origin += freeFallVector;
+        float delta = (float)e.Time;
 
-            // wall collide
-            float sd = physics.CastRay(
-                camera.Origin,
-                Vector3.NormalizeFast(motionStep.Origin)
-                );
+        if (physics.GlobalTime - s1_timer > 1)
+        {
+            Title = $"{Const.APP_NAME}, {Const.RELEASE_DATE} — " +
+                $"{(delta * 1000).ToString("0.")}ms, " +
+                $"{(1.0 / delta).ToString("0")}fps " +
+                $"// {camera.Origin.X.ToString("0.0")} " +
+                    $": {camera.Origin.Y.ToString("0.0")} " +
+                    $": {camera.Origin.Z.ToString("0.0")} "
+                + (scene.LastError != null ? $" // {scene.LastError}" : "");
 
-            // when hit the wall
-            if (sd <= Const.PLAYER_HIT_RADIUS)
-            {
-                camera.Target = motionStep.Target;    // view only
-                // smooth wall sliding
-                Vector3 hitPoint = camera.Origin + motionStep.Origin * Const.PLAYER_HIT_RADIUS;
-                Vector3 norm = physics.GetSurfaceNormal(hitPoint);
-                Vector3 invNorm = -norm;
-                invNorm *= (motionStep.Origin * norm).LengthFast;
-
-                motionStep.Origin -= invNorm;
-            }
-
-            camera.Translate(motionStep);
-
-            var keyboard = Keyboard.GetState();
-            UpdateWindowKeys(keyboard);
-            lastKeyboard = keyboard;
+            s1_timer = physics.GlobalTime;
         }
 
-        protected override void OnLoad(EventArgs e)
-        {
-            render.Start();
-        }
+        render.OnFrame(
+            physics.GlobalTime, 
+            FramebufferSize.X, 
+            FramebufferSize.Y, 
+            camera, 
+            scene);
 
-        protected override void OnResize(EventArgs e)
-        {
-            render.OnResize(Width, Height);
-        }
+        SwapBuffers();
+    }
 
-        KeyboardState lastKeyboard = new KeyboardState();
-        private void UpdateWindowKeys(KeyboardState keyboard)
-        {
-            if (keyboard.IsKeyDown(Key.Escape))
-                Exit();
-
-            if (keyboard[Key.F11] && (lastKeyboard[Key.F11] != keyboard[Key.F11]))
-            {
-                DisplayDevice defaultDisplayDevice = DisplayDevice.GetDisplay(DisplayIndex.Default);
-
-                if (WindowState == WindowState.Fullscreen)
-                {
-                    WindowState = WindowState.Normal;
-                    CursorVisible = true;
-                    defaultDisplayDevice.RestoreResolution();
-                }
-                else
-                {
-                    WindowState = WindowState.Fullscreen;
-                    CursorVisible = false;
-                    defaultDisplayDevice
-                        .ChangeResolution(
-                            Const.DISPLAY_FULLHD_W, Const.DISPLAY_FULLHD_H,
-                            Const.DISPLAY_BITPERPIXEL,
-                            Const.DISPLAY_REFRESH_RATE);
-                }
-            } // if state F11
-        } // UpdateWindowKeys()
-
-        double s1_timer = 0;    // smooth fps printing
-
-        protected override void OnRenderFrame(FrameEventArgs e)
-        {
-            float delta = (float)e.Time;
-
-            if (physics.GlobalTime - s1_timer > 1)
-            {
-                Title = $"{Const.APP_NAME}, {Const.RELEASE_DATE} — {(delta * 1000).ToString("0.")}ms, {(1.0 / delta).ToString("0")}fps // {camera.Origin.X.ToString("0.0")} : {camera.Origin.Y.ToString("0.0")} : {camera.Origin.Z.ToString("0.0")} ";
-                s1_timer = physics.GlobalTime;
-            }
-
-            render.OnFrame(physics.GlobalTime, Width, Height, camera);
-            SwapBuffers();
-        }
-
-        protected override void OnUnload(EventArgs e)
-        {
-            inputUpdateTimer.Enabled = false;
-            render.Stop();
-
-            base.OnClosed(e);
-        }
+    protected override void OnUnload()
+    {
+        render.Stop();
+        base.OnUnload();
     }
 }

@@ -11,3 +11,5 @@ SPACE - Up
 ESC - Exit
 
 F11 - Fullscreen/Normal
+
+F5 - Reload scene (`scenes/default.scene` next to the executable)

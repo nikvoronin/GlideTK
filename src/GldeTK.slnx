@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="language.txt" />
+    <File Path="TODO.txt" />
+  </Folder>
+  <Project Path="GldeTK/GldeTK.csproj" />
+</Solution>
