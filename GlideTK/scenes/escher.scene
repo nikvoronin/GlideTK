@@ -1,0 +1,303 @@
+# Stairs after M. C. Escher, run: GlideTK.exe scenes/escher.scene
+#
+# Relativity (1953): a hall where three gravities meet at right angles. People of the floor
+# walk on +Y faces, people of the west wall on +X faces, people of the north wall on +Z faces;
+# the 45-degree stair under the ceiling is walked on top and underneath.
+# Outside: Waterfall (1961) with its polyhedra and the mill wheel, Belvedere (1958) with the
+# impossible cube and the ladder, the chain of Snakes (1969), Order and Chaos (1950).
+#
+# A straight stair is a row of step boxes along its slope: the boxes are repeated along the
+# rotated X axis, each box touches the next one by a corner and stays inside its cell,
+# a slab under the slope makes it solid. Walkable stairs: 21 steps, rise 0.3, run 0.6,
+# 26.565 degrees, cells of 0.67082, the row is centered at 10.5 cells = 7.0436.
+# Blocks like round group a whole stair into one object: fewer BVH leaves, a smaller program.
+# The scene takes 1022 of the 1024 vec4 in the UBO, anything new needs room made elsewhere.
+#
+# The hall is the cube x -30..-6, y 0..24, z -12..12, the player starts at x = 3 facing it.
+
+# paper-white ground
+plane (0, 1, 0) 0 color (0.86, 0.83, 0.76)
+
+# Relativity ==========================================================================
+# the cube of the hall, its bottom edges sunk under the floor to step over, and the floor
+translate (-18, 11.8, 0) { boxframe (12, 12, 12) 0.4 color (0.38, 0.35, 0.32) }
+translate (-18, 0.1, 0) { box (11.6, 0.1, 11.6) color (0.5, 0.47, 0.42) }
+
+# north wall: the floor of the +Z people, arches and hexagonal windows for the others
+subtract {
+    translate (-18, 12, -11.8) { box (11.6, 11.6, 0.4) color (0.62, 0.58, 0.52) }
+    translate (-18, 2.6, -11.8) {
+        repeat (6, 0, 0) limit (1, 0, 0) {
+            box (1.4, 2.6, 1) color (0.62, 0.58, 0.52)
+            segcylinder (0, 2.6, -1) (0, 2.6, 1) 1.4 color (0.62, 0.58, 0.52)
+        }
+    }
+    translate (-18, 16, -11.8) {
+        repeat (6, 0, 0) limit (1, 0, 0) { hexprism 1.3 1 color (0.62, 0.58, 0.52) }
+    }
+}
+
+# west wall: the floor of the +X people, round windows
+subtract {
+    translate (-29.8, 12, 0) { box (0.4, 11.6, 11.6) color (0.62, 0.58, 0.52) }
+    translate (-29.8, 10, 0) {
+        repeat (0, 0, 6) limit (0, 0, 1) { segcylinder (-1, 0, 0) (1, 0, 0) 1.6 color (0.62, 0.58, 0.52) }
+    }
+}
+
+# floor people: a flight up to the west landing ----------------------------------
+translate (-11.4, 0, 6) {
+    round 0.02 {
+        rotate (0, 0, -26.565) {
+            translate (-7.0436, 0, 0) {
+                repeat (0.67082, 0, 0) limit (10, 0, 0) { rotate (0, 0, 26.565) { box (0.28, 0.13, 1.58) color (0.84, 0.8, 0.72) } }
+                translate (0, -0.25, 0) { box (7.0436, 0.23, 1.58) color (0.84, 0.8, 0.72) }
+            }
+        }
+    }
+}
+translate (-27, 6, 7) { roundbox (3, 0.3, 5) 0.05 color (0.84, 0.8, 0.72) }
+
+# and the second flight back to the east landing
+translate (-24, 6.3, 10.2) {
+    round 0.02 {
+        rotate (0, 0, 26.565) {
+            translate (7.0436, 0, 0) {
+                repeat (0.67082, 0, 0) limit (10, 0, 0) { rotate (0, 0, -26.565) { box (0.28, 0.13, 1.58) color (0.84, 0.8, 0.72) } }
+                translate (0, -0.25, 0) { box (7.0436, 0.23, 1.58) color (0.84, 0.8, 0.72) }
+            }
+        }
+    }
+}
+translate (-8.7, 12.3, 7) { roundbox (2.7, 0.3, 5) 0.05 color (0.84, 0.8, 0.72) }
+
+# columns under the landings, newel posts with balls at the foot of the stair
+translate (-24.4, 3, 2.4) { cylinder 0.3 3 color (0.72, 0.68, 0.6) }
+translate (-11.1, 6.15, 2.4) { cylinder 0.3 6.15 color (0.72, 0.68, 0.6) }
+translate (-11.4, 0, 6) {
+    mirror (0, 0, 1) {
+        translate (0, 0, 1.8) {
+            smooth 0.1 {
+                translate (0, 0.6, 0) { cylinder 0.12 0.6 color (0.72, 0.68, 0.6) }
+                translate (0, 1.4, 0) { sphere 0.25 color (0.72, 0.68, 0.6) }
+            }
+        }
+    }
+}
+
+# the 45-degree stair under the ceiling: 15 square steps touching by their corners,
+# the floor people walk on its top, the +X people on its underside
+translate (-22, 12.6, -5) {
+    round 0.03 {
+        rotate (0, 0, 45) {
+            translate (5.3033, 0, 0) {
+                repeat (0.70711, 0, 0) limit (7, 0, 0) { rotate (0, 0, -45) { box (0.22, 0.22, 1.37) color (0.84, 0.8, 0.72) } }
+                box (5.3033, 0.12, 1.37) color (0.84, 0.8, 0.72)
+            }
+        }
+    }
+}
+
+# west wall people: a flight rising off the wall, going "up" towards -Y ------------
+translate (-29.4, 21, -6) {
+    round 0.02 {
+        rotate (0, 0, -63.435) {
+            translate (7.0436, 0, 0) {
+                repeat (0.67082, 0, 0) limit (10, 0, 0) { rotate (0, 0, -26.565) { box (0.28, 0.13, 1.58) color (0.84, 0.8, 0.72) } }
+                translate (0, -0.25, 0) { box (7.0436, 0.23, 1.58) color (0.84, 0.8, 0.72) }
+            }
+        }
+    }
+}
+translate (-23.4, 5.6, -6) { roundbox (0.3, 2.6, 2.4) 0.05 color (0.84, 0.8, 0.72) }
+
+# north wall people: a flight rising off the wall towards +Z -----------------------
+translate (-25, 6.5, -11.4) {
+    round 0.02 {
+        rotate (90, -26.565, 0) {
+            translate (7.0436, 0, 0) {
+                repeat (0.67082, 0, 0) limit (10, 0, 0) { rotate (0, 0, -26.565) { box (0.28, 0.13, 1.58) color (0.84, 0.8, 0.72) } }
+                translate (0, -0.25, 0) { box (7.0436, 0.23, 1.58) color (0.84, 0.8, 0.72) }
+            }
+        }
+    }
+}
+translate (-9.7, 6.5, -5.4) { roundbox (2.7, 2.4, 0.3) 0.05 color (0.84, 0.8, 0.72) }
+
+# faceless people, one for each gravity -------------------------------------------
+translate (-27, 6.3, 9) {
+    smooth 0.15 {
+        translate (0, 0.2, 0) { roundcone 0.2 0.35 1.3 color (0.92, 0.9, 0.86) }
+        translate (0, 2.15, 0) { sphere 0.27 color (0.92, 0.9, 0.86) }
+    }
+}
+translate (-29.4, 15, 4) {
+    rotate (0, 0, -90) {
+        smooth 0.15 {
+            translate (0, 0.2, 0) { roundcone 0.2 0.35 1.3 color (0.92, 0.9, 0.86) }
+            translate (0, 2.15, 0) { sphere 0.27 color (0.92, 0.9, 0.86) }
+        }
+    }
+}
+translate (-15, 18, -11.4) {
+    rotate (90, 0, 0) {
+        smooth 0.15 {
+            translate (0, 0.2, 0) { roundcone 0.2 0.35 1.3 color (0.92, 0.9, 0.86) }
+            translate (0, 2.15, 0) { sphere 0.27 color (0.92, 0.9, 0.86) }
+        }
+    }
+}
+
+# Snakes: a chain hanging from the top edge, links turned by 90 degrees in turn -----
+translate (-18, 17.2, 11.6) {
+    repeat (0, 1.8, 0) limit (0, 3, 0) { link 0.3 0.3 0.07 color (0.35, 0.33, 0.3) }
+    translate (0, 0.9, 0) {
+        repeat (0, 1.8, 0) limit (0, 2, 0) { rotate (0, 90, 0) { link 0.3 0.3 0.07 color (0.35, 0.33, 0.3) } }
+    }
+}
+
+# Belvedere: the impossible cube on a bench and the ladder ===========================
+translate (0, 0.5, -8) {
+    elongate (1.2, 0, 0) { roundcylinder 0.4 0.05 0.05 color (0.45, 0.33, 0.22) }
+    translate (0.4, 0.55, 0) { rotate (20, 35, 0) { boxframe (0.45, 0.45, 0.45) 0.05 color (0.3, 0.28, 0.26) } }
+}
+translate (-4.8, 0, -3) {
+    rotate (0, 0, -12) {
+        union {
+            segcylinder (0, 0, -0.5) (0, 9, -0.5) 0.06 color (0.45, 0.33, 0.22)
+            segcylinder (0, 0, 0.5) (0, 9, 0.5) 0.06 color (0.45, 0.33, 0.22)
+        }
+        translate (0, 4.5, 0) {
+            repeat (0, 0.5, 0) limit (0, 8, 0) { segcylinder (0, 0, -0.5) (0, 0, 0.5) 0.04 color (0.45, 0.33, 0.22) }
+        }
+    }
+}
+
+# Waterfall: two towers with polyhedra, an aqueduct and the mill wheel ================
+translate (-14, 0, 18) {
+
+    # three storeys of columns per tower
+    mirror (1, 0, 0) {
+        translate (4, 0, 0) {
+            round 0.02 {
+                translate (0, 4.5, 0) {
+                    repeat (0, 3, 0) limit (0, 1, 0) {
+                        mirror (1, 0, 1) { translate (0.9, 0, 0.9) { cylinder 0.16 1.33 } }
+                        translate (0, 1.38, 0) { box (1.18, 0.1, 1.18) }
+                    }
+                }
+                translate (0, 0.1, 0) { box (1.18, 0.08, 1.18) }
+            }
+        }
+    }
+
+    # compound of three cubes on the west tower, compound of three octahedra on the east
+    translate (-4, 9.9, 0) {
+        round 0.02 {
+            rotate (45, 0, 0) { box (0.58, 0.58, 0.58) color (0.75, 0.7, 0.6) }
+            rotate (0, 45, 0) { box (0.58, 0.58, 0.58) color (0.75, 0.7, 0.6) }
+            rotate (0, 0, 45) { box (0.58, 0.58, 0.58) color (0.75, 0.7, 0.6) }
+        }
+    }
+    translate (4, 9.95, 0) {
+        round 0.02 {
+            rotate (45, 0, 0) { octahedron 0.9 color (0.75, 0.7, 0.6) }
+            rotate (0, 45, 0) { octahedron 0.9 color (0.75, 0.7, 0.6) }
+            rotate (0, 0, 45) { octahedron 0.9 color (0.75, 0.7, 0.6) }
+        }
+    }
+
+    # the aqueduct between the towers, ripples flow along the water:
+    # the noise period 2 pi / 6 = 1.0472 equals the repeat period, so the cells join
+    translate (-0.7, 7, 0) {
+        subtract {
+            box (2.3, 0.4, 0.6)
+            translate (0.1, 0.2, 0) { box (2.3, 0.4, 0.45) }
+        }
+        intersect {
+            translate (0, 0.05, 0) { box (2.3, 0.1, 0.45) color (0.45, 0.6, 0.72) }
+            translate ((t * 1.2), 0, 0) { repeat (1.0472, 0, 0) { displace 0.04 6 { box (1, 0.1, 1) color (0.45, 0.6, 0.72) } } }
+        }
+    }
+
+    # the waterfall from the open end of the aqueduct down to the wheel
+    translate (1.8, 3.6, 0) {
+        intersect {
+            box (0.15, 3.4, 0.45) color (0.45, 0.6, 0.72)
+            translate (0, (-t * 3), 0) { repeat (0, 1.0472, 0) { displace 0.05 6 { box (0.15, 1, 1) color (0.45, 0.6, 0.72) } } }
+        }
+    }
+
+    # the mill wheel turning in the stream
+    translate (1.2, 1.6, 0) {
+        rotate (0, 0, (t * 40)) {
+            round 0.02 {
+                rotate (90, 0, 0) {
+                    torus 1.4 0.1 color (0.45, 0.33, 0.22)
+                    cylinder 0.25 0.5 color (0.45, 0.33, 0.22)
+                }
+                box (1.5, 0.06, 0.33) color (0.45, 0.33, 0.22)
+                box (0.06, 1.5, 0.33) color (0.45, 0.33, 0.22)
+            }
+        }
+    }
+}
+
+# Order and Chaos: a star in a broken shell ===========================================
+translate (2, 0, 9) {
+    translate (0, 0.6, 0) { cylinder 1 0.6 }
+    translate (0, 2.6, 0) {
+        subtract {
+            cuthollowsphere 1.4 0.9 0.06 color (0.8, 0.85, 0.9)
+            translate (1.2, 0.3, 0.6) { sphere 0.7 }
+        }
+        rotate (0, (t * 20), 0) {
+            round 0.01 {
+                octahedron 1.1 color (0.75, 0.7, 0.6)
+                rotate (45, 45, 0) { octahedron 1.1 color (0.75, 0.7, 0.6) }
+            }
+        }
+    }
+}
+
+# Ascending and Descending (1960): the monks' stair around the courtyard on the roof ==
+# A real roof cannot close Escher's endless climb, so each side rises from its middle
+# to both corners: one flight at z = 4 and a flight at z = -4 turned by -90 degrees to x = 4,
+# both mirrored to all four sides (translate along Z commutes with the rotation around Z).
+# Flights of 7 steps (cells centered at 3.5 cells = 2.3479), the player can walk the loop.
+subtract {
+    translate (-14, 2, -24) { box (6, 2, 6) color (0.62, 0.58, 0.52) }
+    translate (-14, 2, -24) { box (2.9, 3, 2.9) color (0.5, 0.47, 0.42) }
+}
+translate (-14, 4, -24) {
+    round 0.02 {
+        mirror (1, 0, 1) {
+            rotate (0, 0, 26.565) {
+                translate (2.3479, 0, 4) {
+                    repeat (0.67082, 0, 0) limit (3, 0, 0) { rotate (0, 0, -26.565) { box (0.28, 0.13, 0.98) color (0.84, 0.8, 0.72) } }
+                    translate (0, -0.25, 0) { box (2.3479, 0.23, 0.98) color (0.84, 0.8, 0.72) }
+                }
+            }
+            translate (4, 1.05, 4) { box (0.98, 1.03, 0.98) color (0.84, 0.8, 0.72) }      # corner landings
+            rotate (0, -90, 0) {
+                rotate (0, 0, 26.565) {
+                    translate (2.3479, 0, -4) {
+                        repeat (0.67082, 0, 0) limit (3, 0, 0) { rotate (0, 0, -26.565) { box (0.28, 0.13, 0.98) color (0.84, 0.8, 0.72) } }
+                        translate (0, -0.25, 0) { box (2.3479, 0.23, 0.98) color (0.84, 0.8, 0.72) }
+                    }
+                }
+            }
+        }
+    }
+}
+# corner turrets with conical roofs
+translate (-14, 0, -24) {
+    mirror (1, 0, 1) {
+        translate (5.6, 0, 5.6) {
+            smooth 0.1 {
+                translate (0, 3.5, 0) { cylinder 0.7 3.5 color (0.62, 0.58, 0.52) }
+                translate (0, 8.6, 0) { cone 30 1.6 color (0.45, 0.33, 0.22) }
+            }
+        }
+    }
+}

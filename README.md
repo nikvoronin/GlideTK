@@ -1,30 +1,24 @@
-# GL+DE+TK
+# GlideTK
 
 Project is no longer active. Shaders are partially compatible with [ShaderToy](https://www.shadertoy.com/).
 
 ![screenshot](https://user-images.githubusercontent.com/11328666/51066117-7be35400-1619-11e9-83e8-7d1c5bf00d12.png)
 
-WASD + mouse-look
-
-SPACE - Up
-
-ESC - Exit
-
-F11 - Fullscreen/Normal
-
-F1 - Key help on the screen (frame time, position and scene errors are always shown)
-
-F7 - Bounding volume hierarchy on/off (on by default, off evaluates every object to compare the speed)
-
-F5 - Reload scene (`scenes/default.scene` next to the executable, or the file passed as the first argument: `GldeTK.exe scenes/showcase.scene`, `GldeTK.exe scenes/parthenon.scene`)
+- WASD + mouse-look
+- SPACE - Up
+- ESC - Exit
+- F11 - Fullscreen/Normal
+- F1 - Key help on the screen (frame time, position and scene errors are always shown)
+- F7 - Bounding volume hierarchy on/off (on by default, off evaluates every object to compare the speed)
+- F5 - Reload scene (`scenes/default.scene` next to the executable, or the file passed as the first argument: `GlideTK.exe scenes/showcase.scene`, `GlideTK.exe scenes/parthenon.scene`, `GlideTK.exe scenes/escher.scene`)
 
 ## Scene language
 
-Scene files live in `src/GldeTK/scenes/*.scene` and are copied next to the executable.
-`GldeTK.exe` loads `scenes/default.scene`, or the file given as the first argument:
+Scene files live in `GlideTK/scenes/*.scene` and are copied next to the executable.
+`GlideTK.exe` loads `scenes/default.scene`, or the file given as the first argument:
 
-```
-GldeTK.exe scenes/showcase.scene
+```shell
+./GlideTK.exe scenes/showcase.scene
 ```
 
 F5 reloads the scene at runtime. The parsed scene is compiled every physics tick into a vec4 program
@@ -37,14 +31,14 @@ each with a bounding box in a BVH; objects whose box is farther than the nearest
 and `repeat` without `limit`. Prefer `repeat (c) limit (n)` and finite shapes for big scenes.
 
 Distance functions and operations follow [iquilezles.org/articles/distfunctions](https://iquilezles.org/articles/distfunctions/),
-`scenes/showcase.scene` places every one of them in a row.
+`scenes/showcase.scene` places every one of them in a row. `scenes/parthenon.scene` is a Doric temple.
 
 ### Primitives
 
 Centered at the origin. Optional `color (r, g, b)` may follow the arguments. Angles are in degrees.
 
 | Syntax | Notes |
-|---|---|
+| --- | --- |
 | `sphere r` | |
 | `box (sx, sy, sz)` | half sizes |
 | `roundbox (sx, sy, sz) r` | half sizes include the rounding r |
@@ -83,7 +77,7 @@ Centered at the origin. Optional `color (r, g, b)` may follow the arguments. Ang
 Transform the position for the elements of the block, the block is a union.
 
 | Syntax | Notes |
-|---|---|
+| --- | --- |
 | `translate (x, y, z) { ... }` | |
 | `rotate (degX, degY, degZ) { ... }` | object rotation R = Rz * Ry * Rx |
 | `scale s { ... }` | |
@@ -103,7 +97,7 @@ Transform the position for the elements of the block, the block is a union.
 Apply to the union of the block.
 
 | Syntax | Notes |
-|---|---|
+| --- | --- |
 | `round r { ... }` | rounds the shape by r (grows it by r) |
 | `onion thickness { ... }` | hollow shell |
 | `displace amplitude frequency { ... }` | adds amplitude * sin(f x) sin(f y) sin(f z) |
@@ -111,7 +105,7 @@ Apply to the union of the block.
 ### Object operations
 
 | Syntax | Notes |
-|---|---|
+| --- | --- |
 | `union { a b ... }` | |
 | `subtract { a b ... }` | a minus all the rest |
 | `intersect { a b ... }` | |
@@ -135,7 +129,7 @@ Comments start with `#` and last to the end of the line.
 
 ### Example
 
-```
+```text
 plane (0, 1, 0) 0
 repeat (10, 10 + sin(t), 10) { sphere 1 color (1, 0.55, 0.45) }
 subtract { box (2, 2, 2)  translate (0, 1, 0) { sphere 2.5 } }
