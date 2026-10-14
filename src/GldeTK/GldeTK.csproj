@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <!-- other shaders\fragment_*.c are kept as an archive of the pre-scene-language era -->
-    <EmbeddedResource Include="shaders\fragment.c;shaders\vertex.c" />
+    <EmbeddedResource Include="shaders\fragment.c;shaders\vertex.c;shaders\text_vertex.c;shaders\text_fragment.c" />
     <None Include="scenes\*.scene" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

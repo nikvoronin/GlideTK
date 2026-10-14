@@ -1,6 +1,6 @@
 # GldeTK scene. Shared by the renderer (GPU) and the physics (CPU), F5 reloads it.
 #
-# The language is described in src/language.txt, scenes/showcase.scene shows every
+# The language is described in README.md (Scene language), scenes/showcase.scene shows every
 # primitive and operation (sphere, box, torus, cone, capsule, ... translate, rotate, repeat,
 # twist, bend, round, onion, subtract, smooth, ...).
 # Separate arguments are space-delimited, so wrap arithmetic in parentheses: sphere (1 + 0.2 * sin(t))

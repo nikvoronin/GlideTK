@@ -1,17 +1,13 @@
 ﻿using GldeTK.Scene;
 using OpenTK.Graphics.OpenGL4;
 using System;
-using System.IO;
-using System.Reflection;
 
 
 namespace GldeTK;
 
 public class Render
 {
-    int h_vertex,
-        h_fragment,
-        h_shaderProgram,
+    int h_shaderProgram,
         h_vao;
 
     int uf_iGlobalTime,
@@ -34,62 +30,11 @@ public class Render
         return GL.GetUniformLocation(h_shaderProgram, uniformName);
     }
 
-    /// <summary>
-    /// Detach than delete shader
-    /// </summary>
-    /// <param name="h_program">Shader program name index</param>
-    /// <param name="h_index">Shader name index</param>
-    private void RemoveShader(int h_program, int h_index)
-    {
-        GL.DetachShader(h_program, h_index);
-        GL.DeleteShader(h_index);
-    }
-
-    private string LoadEmbeddedFile(string filename)
-    {
-        using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(filename);
-        using var reader = new StreamReader(stream);
-        
-        return reader.ReadToEnd();
-    }
-
-    private int CompileShader(ShaderType type, string filename)
-    {
-        int h_shader = GL.CreateShader(type);
-        GL.ShaderSource(h_shader, LoadEmbeddedFile(filename));
-        GL.CompileShader(h_shader);
-
-        GL.GetShader(h_shader, ShaderParameter.CompileStatus, out int status);
-        if (status == 0)
-        {
-            throw new InvalidOperationException(
-                $"{filename} compile error:\n{GL.GetShaderInfoLog(h_shader)}");
-        }
-
-        return h_shader;
-    }
-
     private void CreateShaders()
     {
-        h_vertex = CompileShader(ShaderType.VertexShader, Const.VERTEX_FILENAME);
-        h_fragment = CompileShader(ShaderType.FragmentShader, Const.FRAGMENT_FILENAME);
-
-        h_shaderProgram = GL.CreateProgram();
-
-        GL.AttachShader(h_shaderProgram, h_vertex);
-        GL.AttachShader(h_shaderProgram, h_fragment);
-
-        GL.LinkProgram(h_shaderProgram);
-
-        RemoveShader(h_shaderProgram, h_vertex);
-        RemoveShader(h_shaderProgram, h_fragment);
-
-        GL.GetProgram(h_shaderProgram, GetProgramParameterName.LinkStatus, out int status);
-        if (status == 0)
-        {
-            throw new InvalidOperationException(
-                $"Shader program link error:\n{GL.GetProgramInfoLog(h_shaderProgram)}");
-        }
+        h_shaderProgram = ShaderLoader.LinkProgram(
+            Const.VERTEX_FILENAME, 
+            Const.FRAGMENT_FILENAME);
 
         GL.UseProgram(h_shaderProgram);
         CreateMapUbo();
@@ -105,7 +50,8 @@ public class Render
     {
         CreateShaders();
 
-        // core profile requires a bound VAO, the fullscreen triangle is built from gl_VertexID
+        // core profile requires a bound VAO,
+        // the fullscreen triangle is built from gl_VertexID
         h_vao = GL.GenVertexArray();
         GL.BindVertexArray(h_vao);
 
@@ -184,6 +130,7 @@ public class Render
         SceneState scene)
     {
         GL.UseProgram(h_shaderProgram);
+        GL.BindVertexArray(h_vao);
 
         GL.Uniform1(uf_iGlobalTime, globalTime);
         GL.Uniform3(uf_iResolution, width, height, 0.0f);

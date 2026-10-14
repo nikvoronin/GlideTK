@@ -15,15 +15,23 @@ namespace GldeTK.Scene;
 public class SceneState
 {
     readonly string path;
+
+    /// <summary>Name of the scene file</summary>
+    public string FileName => Path.GetFileName(path);
     List<SceneNode> nodes = [];
     float time;
 
     public Vector4[] Data { get; private set; }
 
-    /// <summary>Incremented on every Update/Reload, used to skip redundant GPU uploads.</summary>
+    /// <summary>
+    /// Incremented on every Update/Reload, 
+    /// used to skip redundant GPU uploads.
+    /// </summary>
     public int Version { get; private set; }
 
-    /// <summary>Last load error, null when the scene file loaded fine.</summary>
+    /// <summary>
+    /// Last load error, null when the scene file loaded fine.
+    /// </summary>
     public string LastError { get; private set; }
 
     public SceneState(string path)

@@ -1,4 +1,5 @@
 ﻿using GldeTK.Scene;
+using GldeTK.Text;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
@@ -13,6 +14,7 @@ public class MainWindow : GameWindow
     readonly SceneState scene;
     readonly Physics physics;
     readonly Render render;
+    readonly TextRenderer text;
 
     /// <param name="scenePath">Scene file, relative to the executable or absolute</param>
     public MainWindow(string scenePath)
@@ -29,6 +31,7 @@ public class MainWindow : GameWindow
         VSync = VSyncMode.Adaptive;
 
         render = new Render();
+        text = new TextRenderer();
 
         camera = new Camera(
             new Vector3(3, 1, 0),
@@ -38,6 +41,8 @@ public class MainWindow : GameWindow
         scene = new SceneState(scenePath);
         physics = new Physics(scene);
         motionCtrl = new FpsController();
+
+        Title = $"{Const.APP_NAME} - {scene.FileName}";
     }
 
     protected override void OnUpdateFrame(FrameEventArgs e)
@@ -47,11 +52,16 @@ public class MainWindow : GameWindow
         float delta = (float)e.Time;
         physics.GlobalTime += delta;
 
-        // scene is evaluated once per tick, physics and the next rendered frames use the same data
+        // scene is evaluated once per tick,
+        // physics and the next rendered frames use the same data
         scene.Update(physics.GlobalTime);
 
         // update player input (keyboard_wasd+space+shift + mouse-look)
-        Ray motionStep = motionCtrl.Update(delta, camera.RayCopy, KeyboardState, MouseState);
+        Ray motionStep = motionCtrl.Update(
+            delta, 
+            camera.RayCopy, 
+            KeyboardState, 
+            MouseState);
 
         // player sphere: gravity, collisions and sliding along the surfaces
         Vector3 center = physics.Step(
@@ -72,6 +82,7 @@ public class MainWindow : GameWindow
         base.OnLoad();
         CursorState = CursorState.Grabbed;
         render.Start();
+        text.Start();
     }
 
     protected override void OnResize(ResizeEventArgs e)
@@ -88,6 +99,9 @@ public class MainWindow : GameWindow
         if (keyboard.IsKeyPressed(Const.INPUT_KEY_RELOAD_SCENE))
             scene.Reload();
 
+        if (keyboard.IsKeyPressed(Const.INPUT_KEY_HELP))
+            showHelp = !showHelp;
+
         if (keyboard.IsKeyPressed(Const.INPUT_KEY_TOGGLE_BVH))
             render.Bvh = !render.Bvh;
 
@@ -99,26 +113,44 @@ public class MainWindow : GameWindow
         }
     }
 
-    double s1_timer = 0;    // smooth fps printing
+    // frame time averaged over HUD_UPDATE_INTERVAL
+    const double HUD_UPDATE_INTERVAL = 0.5;
+    double frameTimeSum;
+    int frameCount;
+    double fps, frameMs;
+
+    bool showHelp;
+
+    const string HELP =
+        "WASD   move\n" +
+        "Mouse  look\n" +
+        "Space  up\n" +
+        "Shift  down\n" +
+        "F1     this help\n" +
+        "F5     reload the scene\n" +
+        "F7     BVH on/off\n" +
+        "F11    fullscreen\n" +
+        "Esc    exit";
+
+    static readonly Color4 HUD_TEXT = new(1f, 1f, 1f, 1f);
+    static readonly Color4 HUD_HELP = new(1f, 0.92f, 0.65f, 1f);
+    static readonly Color4 HUD_ERROR = new(1f, 0.35f, 0.3f, 1f);
+    static readonly Color4 HUD_BACKGROUND = new(0f, 0f, 0f, 0.35f);
+    const int HUD_SCALE = 2;
+    const float HUD_MARGIN = 10f;
 
     protected override void OnRenderFrame(FrameEventArgs e)
     {
         base.OnRenderFrame(e);
 
-        float delta = (float)e.Time;
-
-        if (physics.GlobalTime - s1_timer > 1)
+        frameTimeSum += e.Time;
+        frameCount++;
+        if (frameTimeSum >= HUD_UPDATE_INTERVAL)
         {
-            Title = $"{Const.APP_NAME}, {Const.RELEASE_DATE} — " +
-                $"{delta * 1000:0.}ms, " +
-                $"{1.0 / delta:0}fps " +
-                $"// {camera.Origin.X:0.0} " +
-                    $": {camera.Origin.Y:0.0} " +
-                    $": {camera.Origin.Z:0.0} "
-                + (render.Bvh ? "// BVH on" : "// BVH off")
-                + (scene.LastError != null ? $" // {scene.LastError}" : "");
-
-            s1_timer = physics.GlobalTime;
+            fps = frameCount / frameTimeSum;
+            frameMs = 1000.0 * frameTimeSum / frameCount;
+            frameTimeSum = 0;
+            frameCount = 0;
         }
 
         render.OnFrame(
@@ -128,11 +160,48 @@ public class MainWindow : GameWindow
             camera, 
             scene);
 
+        DrawHud();
+
         SwapBuffers();
+    }
+
+    /// <summary>
+    /// Frame statistics, help and scene errors over the picture
+    /// </summary>
+    void DrawHud()
+    {
+        Vector3 pos = camera.Origin;
+        var stats =
+            $"{fps:0} fps  {frameMs:0.0} ms\n" +
+            $"{pos.X:0.0} {pos.Y:0.0} {pos.Z:0.0}{(physics.Grounded ? "" : "  in the air")}\n" +
+            $"{scene.FileName}  BVH {(render.Bvh ? "on" : "off")}\n" +
+            "F1 help";
+
+        var at = new Vector2(HUD_MARGIN, HUD_MARGIN);
+        at.Y += text.Print(stats, at, HUD_TEXT, HUD_SCALE, HUD_BACKGROUND).Y + HUD_MARGIN;
+
+        if (showHelp)
+        {
+            at.Y += text.Print(HELP, at, HUD_HELP, HUD_SCALE, HUD_BACKGROUND).Y + HUD_MARGIN;
+        }
+
+        if (scene.LastError != null)
+        {
+            text.Print(
+                scene.LastError,
+                at,
+                HUD_ERROR,
+                HUD_SCALE,
+                HUD_BACKGROUND,
+                maxWidth: FramebufferSize.X - 2 * HUD_MARGIN);
+        }
+
+        text.Draw(FramebufferSize.X, FramebufferSize.Y);
     }
 
     protected override void OnUnload()
     {
+        text.Stop();
         render.Stop();
         base.OnUnload();
     }

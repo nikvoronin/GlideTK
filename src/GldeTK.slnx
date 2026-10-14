@@ -1,7 +1,6 @@
 <Solution>
   <Folder Name="/Solution Items/">
-    <File Path="language.txt" />
-    <File Path="TODO.txt" />
+    <File Path="../README.md" />
   </Folder>
   <Project Path="GldeTK/GldeTK.csproj" />
 </Solution>

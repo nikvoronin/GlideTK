@@ -9,6 +9,8 @@ public static class Const
 
     public const string FRAGMENT_FILENAME = "GldeTK.shaders.fragment.c";
     public const string VERTEX_FILENAME = "GldeTK.shaders.vertex.c";
+    public const string TEXT_VERTEX_FILENAME = "GldeTK.shaders.text_vertex.c";
+    public const string TEXT_FRAGMENT_FILENAME = "GldeTK.shaders.text_fragment.c";
 
     public const string SCENE_FILENAME = "scenes/default.scene";
 
@@ -20,6 +22,8 @@ public static class Const
     public const string UF_RAY_ORIGIN = "ro";
     public const string UF_PROJECTION_MATRIX = "camProj";
     public const string UF_USE_BVH = "useBvh";
+    public const string UF_TEXT_SCREEN_SIZE = "screenSize";
+    public const string UF_TEXT_ATLAS = "atlas";
 
     public const int SCENE_STACK_DEPTH = 8;     // must match STACK_DEPTH in fragment.c
     public const int BVH_STACK_DEPTH = 32;      // must match BVH_STACK_DEPTH in fragment.c
@@ -29,6 +33,7 @@ public static class Const
     public const double PHYSICS_UPDATE_FREQUENCY = 100; // Hz, every 10 ms
     public const Keys INPUT_KEY_FULLSCREEN = Keys.F11;
     public const Keys INPUT_KEY_EXIT = Keys.Escape;
+    public const Keys INPUT_KEY_HELP = Keys.F1;
     public const Keys INPUT_KEY_RELOAD_SCENE = Keys.F5;
     public const Keys INPUT_KEY_TOGGLE_BVH = Keys.F7;
 
