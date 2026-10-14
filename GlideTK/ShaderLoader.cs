@@ -18,29 +18,46 @@ public static class ShaderLoader
         return reader.ReadToEnd();
     }
 
-    public static int CompileShader(ShaderType type, string filename)
+    /// <param name="patch">Changes the source before compiling,
+    /// e.g. injects the generated code</param>
+    public static int CompileShader(
+        ShaderType type, 
+        string filename, 
+        Func<string, string> patch = null)
     {
+        string source = LoadEmbeddedFile(filename);
+        if (patch != null)
+            source = patch(source);
+
         int h_shader = GL.CreateShader(type);
-        GL.ShaderSource(h_shader, LoadEmbeddedFile(filename));
+        GL.ShaderSource(h_shader, source);
         GL.CompileShader(h_shader);
 
         GL.GetShader(h_shader, ShaderParameter.CompileStatus, out int status);
         if (status == 0)
         {
+            string log = GL.GetShaderInfoLog(h_shader);
+            GL.DeleteShader(h_shader);
+
             throw new InvalidOperationException(
-                $"{filename} compile error:\n{GL.GetShaderInfoLog(h_shader)}");
+                $"{filename} compile error:\n{log}");
         }
 
         return h_shader;
     }
 
     /// <summary>
-    /// Links a program of a vertex and a fragment shader, the shaders are deleted after linking
+    /// Links a program of a vertex and a fragment shader, 
+    /// the shaders are deleted after linking
     /// </summary>
-    public static int LinkProgram(string vertexFilename, string fragmentFilename)
+    /// <param name="patchFragment">Changes the fragment source before compiling</param>
+    public static int LinkProgram(
+        string vertexFilename,
+        string fragmentFilename,
+        Func<string, string> patchFragment = null)
     {
         int h_vertex = CompileShader(ShaderType.VertexShader, vertexFilename);
-        int h_fragment = CompileShader(ShaderType.FragmentShader, fragmentFilename);
+        int h_fragment = CompileShader(ShaderType.FragmentShader, fragmentFilename, patchFragment);
 
         int h_program = GL.CreateProgram();
 
@@ -57,8 +74,11 @@ public static class ShaderLoader
         GL.GetProgram(h_program, GetProgramParameterName.LinkStatus, out int status);
         if (status == 0)
         {
+            string log = GL.GetProgramInfoLog(h_program);
+            GL.DeleteProgram(h_program);
+
             throw new InvalidOperationException(
-                $"Shader program ({fragmentFilename}) link error:\n{GL.GetProgramInfoLog(h_program)}");
+                $"Shader program ({fragmentFilename}) link error:\n{log}");
         }
 
         return h_program;

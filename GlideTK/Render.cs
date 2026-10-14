@@ -1,4 +1,5 @@
 ﻿using GlideTK.Scene;
+using GlideTK.Scene.Glsl;
 using OpenTK.Graphics.OpenGL4;
 using System;
 
@@ -25,19 +26,55 @@ public class Render
     int mapBlockSize;
     int uploadedSceneVersion = -1;
 
+    int builtShaderRevision = -1;
+    string builtSceneGlsl;
+
+    /// <summary>
+    /// Error of the last shader generated for the scene, null when it built fine.
+    /// On an error the previous shader keeps running.
+    /// </summary>
+    public string ShaderError { get; private set; }
+
     private int GetUniformLocation(string uniformName)
     {
         return GL.GetUniformLocation(h_shaderProgram, uniformName);
     }
 
-    private void CreateShaders()
+    /// <summary>
+    /// Generates the scene functions of the fragment shader and links the program,
+    /// nothing changes when the generated code is the same as in the running shader
+    /// </summary>
+    private void BuildShader(SceneState scene)
     {
-        h_shaderProgram = ShaderLoader.LinkProgram(
-            Const.VERTEX_FILENAME, 
-            Const.FRAGMENT_FILENAME);
+        builtShaderRevision = scene.ShaderRevision;
+
+        string sceneGlsl = SceneGlsl.Generate(scene.Shapes);
+        if (sceneGlsl == builtSceneGlsl)
+            return;
+
+        int program;
+        try
+        {
+            program = ShaderLoader.LinkProgram(
+                Const.VERTEX_FILENAME,
+                Const.FRAGMENT_FILENAME,
+                source => SceneGlsl.Inject(source, scene.Shapes));
+        }
+        catch (InvalidOperationException e)
+        {
+            ShaderError = e.Message;
+            return;
+        }
+
+        if (h_shaderProgram != 0)
+            GL.DeleteProgram(h_shaderProgram);
+
+        h_shaderProgram = program;
+        builtSceneGlsl = sceneGlsl;
+        ShaderError = null;
 
         GL.UseProgram(h_shaderProgram);
-        CreateMapUbo();
+        BindMapBlock();
 
         uf_iGlobalTime = GetUniformLocation(Const.UF_TIMER);
         uf_iResolution = GetUniformLocation(Const.UF_RESOLUTION);
@@ -46,9 +83,13 @@ public class Render
         uf_UseBvh = GetUniformLocation(Const.UF_USE_BVH);
     }
 
-    public void Start()
+    public void Start(SceneState scene)
     {
-        CreateShaders();
+        BuildShader(scene);
+        if (h_shaderProgram == 0)
+            throw new InvalidOperationException(ShaderError);
+
+        CreateMapUbo();
 
         // core profile requires a bound VAO,
         // the fullscreen triangle is built from gl_VertexID
@@ -58,7 +99,7 @@ public class Render
         GL.Disable(EnableCap.DepthTest);
     }
 
-    private void CreateMapUbo()
+    private void BindMapBlock()
     {
         int block_index = GL.GetUniformBlockIndex(
             h_shaderProgram, 
@@ -67,6 +108,13 @@ public class Render
             h_shaderProgram, 
             block_index, 
             Const.UBO_SDELEMENTSMAP_BINDING);
+    }
+
+    private void CreateMapUbo()
+    {
+        int block_index = GL.GetUniformBlockIndex(
+            h_shaderProgram, 
+            Const.UBO_SDELEMENTSMAP_BLOCKNAME);
 
         // Allocate space for the buffer
         GL.GetActiveUniformBlock(
@@ -129,6 +177,9 @@ public class Render
         Camera camera, 
         SceneState scene)
     {
+        if (scene.ShaderRevision != builtShaderRevision)
+            BuildShader(scene);
+
         GL.UseProgram(h_shaderProgram);
         GL.BindVertexArray(h_vao);
 

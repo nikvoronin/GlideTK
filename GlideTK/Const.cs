@@ -25,7 +25,7 @@ public static class Const
     public const string UF_TEXT_SCREEN_SIZE = "screenSize";
     public const string UF_TEXT_ATLAS = "atlas";
 
-    public const int SCENE_STACK_DEPTH = 8;     // must match STACK_DEPTH in fragment.c
+    public const int SCENE_STACK_DEPTH = 8;     // nesting limit, the stacks of the CPU interpreter (SceneVM)
     public const int BVH_STACK_DEPTH = 32;      // must match BVH_STACK_DEPTH in fragment.c
 
     public const float PLAYER_HIT_RADIUS = 1.0f;

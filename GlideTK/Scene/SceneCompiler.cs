@@ -1,6 +1,7 @@
 using GlideTK.Scene.Bvh;
 using GlideTK.Scene.Defs;
 using GlideTK.Scene.Expr;
+using GlideTK.Scene.Glsl;
 using GlideTK.Scene.Nodes;
 using OpenTK.Mathematics;
 using System;
@@ -20,27 +21,41 @@ public class SceneCompiler
     static readonly Vector3 DEFAULT_COLOR = new(1f);
     const int MAX_SCALARS = 4;
 
-    /// <summary>An evaluated domain operation applied to every leaf below it</summary>
+    /// <summary>
+    /// An evaluated domain operation applied to every leaf below it
+    /// </summary>
     sealed record DomainStep(
         int Op, 
         float[] Scalars, 
         Vector3[] Vectors, 
         Vector4[] Args);
 
-    sealed record Leaf(List<Vector4> Code, Aabb Bounds);
+    sealed record Leaf(List<Vector4> Code, Aabb Bounds, int ShapeId);
 
     readonly float t;
+    readonly SceneShapes shapes;
     readonly List<Leaf> leaves = [];
     readonly List<DomainStep> chain = [];
     readonly List<Vector3> materials = [DEFAULT_COLOR];
     List<Vector4> code = [];
     int distDepth, posDepth;
 
-    SceneCompiler(float t) => this.t = t;
-
-    public static Vector4[] Compile(IReadOnlyList<SceneNode> nodes, float t)
+    SceneCompiler(float t, SceneShapes shapes)
     {
-        var compiler = new SceneCompiler(t);
+        this.t = t;
+        this.shapes = shapes;
+    }
+
+    /// <param name="shapes">
+    /// Receives the shapes of the leaves, 
+    /// the shader is generated from them (see <see cref="SceneGlsl"/>)
+    /// </param>
+    public static Vector4[] Compile(
+        IReadOnlyList<SceneNode> nodes, 
+        float t, 
+        SceneShapes shapes)
+    {
+        var compiler = new SceneCompiler(t, shapes);
         foreach (SceneNode node in nodes)
             compiler.Flatten(node);
 
@@ -100,16 +115,23 @@ public class SceneCompiler
                 bounds);
         }
 
-        leaves.Add(new Leaf(code, bounds));
+        // the shader selects the leaf function by the w of the first instruction
+        int shapeId = shapes.Register(code);
+        Vector4 header = code[0];
+        code[0] = new Vector4(header.X, header.Y, header.Z, shapeId);
+
+        leaves.Add(new Leaf(code, bounds, shapeId));
     }
 
     /// <summary>
-    /// [0] header, always evaluated (infinite) leaf ranges, leaf programs, BVH nodes, materials
+    /// [0] header, always evaluated (infinite) leaf ranges, 
+    /// leaf programs, BVH nodes, materials
     /// </summary>
     Vector4[] Assemble()
     {
         List<Leaf> always = [.. leaves.Where(l => !l.Bounds.IsFinite)];
         List<Leaf> bounded = [.. leaves.Where(l => l.Bounds.IsFinite)];
+        shapes.SetAlways(always.Select(l => l.ShapeId));
 
         var data = new List<Vector4> { Vector4.Zero };
         data.AddRange(Enumerable.Repeat(Vector4.Zero, always.Count));

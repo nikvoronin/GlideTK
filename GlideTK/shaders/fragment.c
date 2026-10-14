@@ -10,6 +10,9 @@ uniform int useBvh;	// 0: evaluate every leaf, to compare the speed
 // g_map[0] = (materialBase, bvhStart, bvhNodeCount, alwaysCount),
 // g_map[1 .. 1 + alwaysCount) = (start, end) of unbounded leaves, then leaf programs,
 // BVH nodes (min.xyz, left | -start) (max.xyz, right | end), material colors (rgb).
+// The leaf programs are not interpreted: SceneGlsl generates a function for every distinct
+// instruction sequence (shape, its id is the w of the first instruction) at the marker line below,
+// the functions read the arguments from g_map by constant offsets.
 uniform SdElements
 {
 	vec4 g_map[1024];	// Const.UBO_SDELEMENTSMAP_BLOCKCOUNT
@@ -18,72 +21,8 @@ uniform SdElements
 in vec2 fragCoord;
 out vec4 fragColor;
 
-#define STACK_DEPTH 8	// Const.SCENE_STACK_DEPTH
 #define BVH_STACK_DEPTH 32	// Const.BVH_STACK_DEPTH
 #define EMPTY_DISTANCE 1e10
-
-// opcodes, keep in sync with Scene/SceneOpcodes.cs
-#define OP_SPHERE			1
-#define OP_BOX				2
-#define OP_ROUNDBOX			3
-#define OP_BOXFRAME			4
-#define OP_PLANE			5
-#define OP_TORUS			6
-#define OP_CAPPEDTORUS		7
-#define OP_LINK				8
-#define OP_INFCYLINDER		9
-#define OP_CYLINDER			10
-#define OP_SEGCYLINDER		11
-#define OP_ROUNDCYLINDER	12
-#define OP_CONE				13
-#define OP_INFCONE			14
-#define OP_CAPPEDCONE		15
-#define OP_SEGCONE			16
-#define OP_SOLIDANGLE		17
-#define OP_CUTSPHERE		18
-#define OP_CUTHOLLOWSPHERE	19
-#define OP_DEATHSTAR		20
-#define OP_ROUNDCONE		21
-#define OP_SEGROUNDCONE		22
-#define OP_ELLIPSOID		23
-#define OP_RHOMBUS			24
-#define OP_OCTAHEDRON		25
-#define OP_PYRAMID			26
-#define OP_HEXPRISM			27
-#define OP_TRIPRISM			28
-#define OP_CAPSULE			29
-#define OP_VCAPSULE			30
-#define OP_TRIANGLE			31
-#define OP_QUAD				32
-
-#define OP_DOMAIN_FIRST		50
-#define OP_TRANSLATE		50
-#define OP_REPEAT			51
-#define OP_REPEAT_LIMITED	52
-#define OP_ROTATE			53
-#define OP_SCALE			54
-#define OP_MIRROR			55
-#define OP_ELONGATE			56
-#define OP_TWIST			57
-#define OP_BEND				58
-#define OP_REVOLVE			59
-#define OP_EXTRUDE_SLICE	60
-#define OP_POPPOS			61
-
-#define OP_POST_FIRST		70
-#define OP_ROUND			70
-#define OP_ONION			71
-#define OP_DISPLACE			72
-#define OP_EXTRUDE			73
-
-#define OP_FOLD_FIRST		80
-#define OP_UNION			80
-#define OP_SUBTRACT			81
-#define OP_INTERSECT		82
-#define OP_XOR				83
-#define OP_SMOOTH_UNION		84
-#define OP_SMOOTH_SUBTRACT	85
-#define OP_SMOOTH_INTERSECT	86
 
 //----------------------------------------------------------------------
 // Signed distance functions, https://iquilezles.org/articles/distfunctions/
@@ -406,52 +345,6 @@ float udQuad(vec3 p, vec3 a, vec3 b, vec3 c, vec3 d)
 }
 
 //----------------------------------------------------------------------
-// Scene program interpreter, mirror of Scene/SceneVM.cs.
-// Instruction at pc: header (op, length, material, 0), S = g_map[pc + 1], Vi = g_map[pc + 2 + i]
-
-#define S	g_map[pc + 1]
-#define V(i)	g_map[pc + 2 + (i)].xyz
-
-float sdPrimitive(int op, int pc, vec3 p)
-{
-	switch (op)
-	{
-		case OP_SPHERE:				return sdSphere(p, S.x);
-		case OP_BOX:				return sdBox(p, V(0));
-		case OP_ROUNDBOX:			return sdRoundBox(p, V(0), S.x);
-		case OP_BOXFRAME:			return sdBoxFrame(p, V(0), S.x);
-		case OP_PLANE:				return sdPlane(p, V(0), S.x);
-		case OP_TORUS:				return sdTorus(p, S.x, S.y);
-		case OP_CAPPEDTORUS:		return sdCappedTorus(p, S.xy, S.z, S.w);
-		case OP_LINK:				return sdLink(p, S.x, S.y, S.z);
-		case OP_INFCYLINDER:		return sdInfCylinder(p, S.x);
-		case OP_CYLINDER:			return sdCylinder(p, S.x, S.y);
-		case OP_SEGCYLINDER:		return sdSegCylinder(p, V(0), V(1), S.x);
-		case OP_ROUNDCYLINDER:		return sdRoundCylinder(p, S.x, S.y, S.z);
-		case OP_CONE:				return sdCone(p, S.xy, S.z);
-		case OP_INFCONE:			return sdInfCone(p, S.xy);
-		case OP_CAPPEDCONE:			return sdCappedCone(p, S.x, S.y, S.z);
-		case OP_SEGCONE:			return sdSegCone(p, V(0), V(1), S.x, S.y);
-		case OP_SOLIDANGLE:			return sdSolidAngle(p, S.xy, S.z);
-		case OP_CUTSPHERE:			return sdCutSphere(p, S.x, S.y);
-		case OP_CUTHOLLOWSPHERE:	return sdCutHollowSphere(p, S.x, S.y, S.z);
-		case OP_DEATHSTAR:			return sdDeathStar(p, S.x, S.y, S.z);
-		case OP_ROUNDCONE:			return sdRoundCone(p, S.x, S.y, S.z);
-		case OP_SEGROUNDCONE:		return sdSegRoundCone(p, V(0), V(1), S.x, S.y);
-		case OP_ELLIPSOID:			return sdEllipsoid(p, V(0));
-		case OP_RHOMBUS:			return sdRhombus(p, S.x, S.y, S.z, S.w);
-		case OP_OCTAHEDRON:			return sdOctahedron(p, S.x);
-		case OP_PYRAMID:			return sdPyramid(p, S.x);
-		case OP_HEXPRISM:			return sdHexPrism(p, S.xy);
-		case OP_TRIPRISM:			return sdTriPrism(p, S.xy);
-		case OP_CAPSULE:			return sdCapsule(p, V(0), V(1), S.x);
-		case OP_VCAPSULE:			return sdVerticalCapsule(p, S.x, S.y);
-		case OP_TRIANGLE:			return udTriangle(p, V(0), V(1), V(2));
-		case OP_QUAD:				return udQuad(p, V(0), V(1), V(2), V(3));
-	}
-	return EMPTY_DISTANCE;
-}
-
 // mod(p, c) - c/2 per axis, an axis with zero period is left as is
 vec3 opRep(vec3 p, vec3 c)
 {
@@ -468,83 +361,6 @@ vec3 opRepLimited(vec3 p, vec3 c, vec3 l)
 	return mix(p, p - safeC * clamp(floor(p / safeC + 0.5), -l, l), repeated);
 }
 
-// returns the new (position, scale)
-vec4 opDomain(int op, int pc, vec3 p, float s)
-{
-	switch (op)
-	{
-		case OP_TRANSLATE:
-			return vec4(p - V(0), s);
-
-		case OP_REPEAT:
-			return vec4(opRep(p, V(0)), s);
-
-		case OP_REPEAT_LIMITED:
-			return vec4(opRepLimited(p, V(0), V(1)), s);
-
-		case OP_ROTATE:
-			return vec4(dot(V(0), p), dot(V(1), p), dot(V(2), p), s);
-
-		case OP_SCALE:
-			return vec4(p / S.x, s * S.x);
-
-		case OP_MIRROR:
-			return vec4(mix(p, abs(p), notEqual(V(0), vec3(0.0))), s);
-
-		case OP_ELONGATE:
-			return vec4(p - clamp(p, -V(0), V(0)), s);
-
-		case OP_TWIST:
-		{
-			float a = S.x * p.y;
-			float co = cos(a);
-			float si = sin(a);
-			return vec4(co * p.x - si * p.z, p.y, si * p.x + co * p.z, s);
-		}
-
-		case OP_BEND:
-		{
-			float a = S.x * p.x;
-			float co = cos(a);
-			float si = sin(a);
-			return vec4(co * p.x - si * p.y, si * p.x + co * p.y, p.z, s);
-		}
-
-		case OP_REVOLVE:
-			return vec4(length(p.xz) - S.x, p.y, 0.0, s);
-
-		case OP_EXTRUDE_SLICE:
-			return vec4(p.x, p.y, 0.0, s);
-	}
-	return vec4(p, s);
-}
-
-// modifies the top distance, p and s are the block's position and scale
-vec2 opPost(int op, int pc, vec2 d, vec3 p, float s)
-{
-	switch (op)
-	{
-		case OP_ROUND:
-			return vec2(d.x - S.x * s, d.y);
-
-		case OP_ONION:
-			return vec2(abs(d.x) - S.x * s, d.y);
-
-		case OP_DISPLACE:
-			return vec2(d.x + S.x * s * sin(S.y * p.x) * sin(S.y * p.y) * sin(S.y * p.z), d.y);
-
-		case OP_EXTRUDE:
-		{
-			vec2 w = vec2(d.x, (abs(p.z) - S.x) * s);
-			return vec2(min(max(w.x, w.y), 0.0) + length(max(w, 0.0)), d.y);
-		}
-	}
-	return d;
-}
-
-#undef S
-#undef V
-
 vec2 opSmooth(vec2 a, vec2 b, float k)
 {
 	if (k <= 0.0)
@@ -555,89 +371,12 @@ vec2 opSmooth(vec2 a, vec2 b, float k)
 	return vec2(d, h > 0.5 ? a.y : b.y);
 }
 
-vec2 opFold(int op, vec2 a, vec2 b, float k)
-{
-	switch (op)
-	{
-		case OP_UNION:
-			return a.x < b.x ? a : b;
-
-		case OP_SUBTRACT:
-			return vec2(max(a.x, -b.x), a.y);
-
-		case OP_INTERSECT:
-			return a.x > b.x ? a : b;
-
-		case OP_XOR:
-			return vec2(max(min(a.x, b.x), -max(a.x, b.x)), a.x < b.x ? a.y : b.y);
-
-		case OP_SMOOTH_UNION:
-			return opSmooth(a, b, k);
-
-		case OP_SMOOTH_SUBTRACT:
-			return vec2(-opSmooth(vec2(-a.x, a.y), b, k).x, a.y);
-
-		case OP_SMOOTH_INTERSECT:
-		{
-			vec2 r = opSmooth(vec2(-a.x, a.y), vec2(-b.x, b.y), k);
-			return vec2(-r.x, r.y);
-		}
-	}
-	return a;
-}
-
-// Runs the stack program of a leaf in [start, end), returns (distance, material id)
-vec2 evalLeaf(int start, int end, vec3 pos)
-{
-	vec4 ps[STACK_DEPTH];	// xyz position, w scale
-	vec2 ds[STACK_DEPTH];	// x distance, y material
-	int pp = 0;
-	int dp = 0;
-	ps[0] = vec4(pos, 1.0);
-
-	int pc = start;
-
-	while (pc < end)
-	{
-		vec4 h = g_map[pc];
-		int op = int(h.x);
-		vec3 p = ps[pp].xyz;
-		float s = ps[pp].w;
-
-		if (op < OP_DOMAIN_FIRST)
-		{
-			ds[dp++] = vec2(sdPrimitive(op, pc, p) * s, h.z);
-		}
-		else if (op == OP_POPPOS)
-		{
-			pp--;
-		}
-		else if (op < OP_POST_FIRST)
-		{
-			ps[pp + 1] = opDomain(op, pc, p, s);
-			pp++;
-		}
-		else if (op < OP_FOLD_FIRST)
-		{
-			ds[dp - 1] = opPost(op, pc, ds[dp - 1], p, s);
-		}
-		else
-		{
-			float k = h.y > 1.0 ? g_map[pc + 1].x * s : 0.0;
-			vec2 b = ds[--dp];
-			ds[dp - 1] = opFold(op, ds[dp - 1], b, k);
-		}
-
-		pc += int(h.y);
-	}
-
-	return ds[0];
-}
-
 vec2 opUnion(vec2 a, vec2 b)
 {
 	return a.x < b.x ? a : b;
 }
+
+//@SCENE_SHAPES
 
 // a box can lower the distance only when it is closer than the best distance or contains
 // the point: inside the box the distance can be negative
@@ -659,12 +398,8 @@ float nodeDistance(int bvh, int node, vec3 p)
 // Scene distance, mirror of SceneVM.Eval. Returns (distance, material id).
 vec2 map(in vec3 pos)
 {
-	vec2 best = vec2(EMPTY_DISTANCE, 0.0);
-
-	// unbounded leaves
-	int alwaysCount = int(g_map[0].w);
-	for (int i = 0; i < alwaysCount; i++)
-		best = opUnion(best, evalLeaf(int(g_map[1 + i].x), int(g_map[1 + i].y), pos));
+	// unbounded leaves, called one after another by the generated code
+	vec2 best = evalAlways(pos);
 
 	int bvh = int(g_map[0].y);
 	int nodeCount = int(g_map[0].z);
@@ -675,7 +410,7 @@ vec2 map(in vec3 pos)
 		{
 			vec4 lo = g_map[bvh + 2 * node];
 			if (lo.w < 0.0)
-				best = opUnion(best, evalLeaf(int(-lo.w), int(g_map[bvh + 2 * node + 1].w), pos));
+				best = opUnion(best, evalLeaf(int(-lo.w), pos));
 		}
 		return best;
 	}
@@ -697,7 +432,7 @@ vec2 map(in vec3 pos)
 
 		if (lo.w < 0.0)
 		{
-			best = opUnion(best, evalLeaf(int(-lo.w), int(hi.w), pos));
+			best = opUnion(best, evalLeaf(int(-lo.w), pos));
 			continue;
 		}
 

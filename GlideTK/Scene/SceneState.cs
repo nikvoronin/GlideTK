@@ -1,3 +1,4 @@
+using GlideTK.Scene.Glsl;
 using GlideTK.Scene.Nodes;
 using OpenTK.Mathematics;
 using System;
@@ -23,6 +24,16 @@ public class SceneState
 
     public Vector4[] Data { get; private set; }
 
+    /// <summary>Shapes of the scene leaves, 
+    /// the fragment shader is generated from them</summary>
+    public SceneShapes Shapes { get; private set; } = new();
+
+    /// <summary>
+    /// Incremented when the shapes changed (a new scene or a new structure), 
+    /// the shader must be generated again.
+    /// </summary>
+    public int ShaderRevision { get; private set; }
+
     /// <summary>
     /// Incremented on every Update/Reload, 
     /// used to skip redundant GPU uploads.
@@ -39,29 +50,39 @@ public class SceneState
         this.path = Path.IsPathRooted(path) 
             ? path 
             : Path.Combine(AppContext.BaseDirectory, path);
-        Data = SceneCompiler.Compile(nodes, 0f);
+        Data = SceneCompiler.Compile(nodes, 0f, Shapes);
         Reload();
     }
 
     public void Update(float t)
     {
         time = t;
-        Data = SceneCompiler.Compile(nodes, t);
+
+        int shapesVersion = Shapes.Version;
+        Data = SceneCompiler.Compile(nodes, t, Shapes);
+
+        if (Shapes.Version != shapesVersion)
+            ShaderRevision++;
+
         Version++;
     }
 
     /// <summary>
-    /// Re-reads the scene file. On error keeps the current scene and sets LastError.
+    /// Re-reads the scene file. 
+    /// On error keeps the current scene and sets LastError.
     /// </summary>
     public bool Reload()
     {
         try
         {
             List<SceneNode> parsed = SceneParser.Parse(File.ReadAllText(path));
-            Vector4[] data = SceneCompiler.Compile(parsed, time);
+            var parsedShapes = new SceneShapes();
+            Vector4[] data = SceneCompiler.Compile(parsed, time, parsedShapes);
 
             nodes = parsed;
             Data = data;
+            Shapes = parsedShapes;
+            ShaderRevision++;
             Version++;
             LastError = null;
 

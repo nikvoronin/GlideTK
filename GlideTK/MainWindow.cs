@@ -16,14 +16,21 @@ public class MainWindow : GameWindow
     readonly Render render;
     readonly TextRenderer text;
 
-    /// <param name="scenePath">Scene file, relative to the executable or absolute</param>
+    /// <param name="scenePath">
+    /// Scene file, relative to the executable or absolute
+    /// </param>
     public MainWindow(string scenePath)
         : base(
-            new GameWindowSettings { UpdateFrequency = Const.PHYSICS_UPDATE_FREQUENCY },
+            new GameWindowSettings 
+            { 
+                UpdateFrequency = Const.PHYSICS_UPDATE_FREQUENCY 
+            },
             new NativeWindowSettings
             {
                 Title = Const.APP_NAME,
-                ClientSize = new Vector2i(Const.DISPLAY_XGA_W, Const.DISPLAY_XGA_H),
+                ClientSize = new Vector2i(
+                    Const.DISPLAY_XGA_W, 
+                    Const.DISPLAY_XGA_H),
                 APIVersion = new System.Version(3, 3),
                 Profile = ContextProfile.Core,
             })
@@ -81,7 +88,7 @@ public class MainWindow : GameWindow
     {
         base.OnLoad();
         CursorState = CursorState.Grabbed;
-        render.Start();
+        render.Start(scene);
         text.Start();
     }
 
@@ -185,10 +192,11 @@ public class MainWindow : GameWindow
             at.Y += text.Print(HELP, at, HUD_HELP, HUD_SCALE, HUD_BACKGROUND).Y + HUD_MARGIN;
         }
 
-        if (scene.LastError != null)
+        string error = scene.LastError ?? render.ShaderError;
+        if (error != null)
         {
             text.Print(
-                scene.LastError,
+                error,
                 at,
                 HUD_ERROR,
                 HUD_SCALE,
