@@ -10,7 +10,7 @@ Project is no longer active. Shaders are partially compatible with [ShaderToy](h
 - F11 - Fullscreen/Normal
 - F1 - Key help on the screen (frame time, position and scene errors are always shown)
 - F7 - Bounding volume hierarchy on/off (on by default, off evaluates every object to compare the speed)
-- F5 - Reload scene (`scenes/default.scene` next to the executable, or the file passed as the first argument: `GlideTK.exe scenes/showcase.scene`, `GlideTK.exe scenes/parthenon.scene`, `GlideTK.exe scenes/escher.scene`)
+- F5 - Reload scene (`scenes/*.scene` next to the executable, or the file passed as the first argument: `GlideTK.exe scenes/showcase.scene`)
 
 ## Scene language
 
@@ -21,17 +21,21 @@ Scene files live in `GlideTK/scenes/*.scene` and are copied next to the executab
 ./GlideTK.exe scenes/showcase.scene
 ```
 
-F5 reloads the scene at runtime. The parsed scene is compiled every physics tick into a vec4 program
+`F5` reloads the scene at runtime. The parsed scene is compiled every physics tick into a vec4 program
 (see `Scene/SceneOpcodes.cs`), which is evaluated both by the CPU physics (`Scene/SceneVM.cs`)
 and by the shader (`map()` in `shaders/fragment.c`).
 
 **Performance:** unions and domain operations (translate, rotate, repeat, ...) are opened into separate objects,
 each with a bounding box in a BVH; objects whose box is farther than the nearest surface found so far are skipped
-(F7 toggles it on the GPU). Unbounded objects are evaluated everywhere: `plane`, `infcylinder`, `infcone`
+(`F7` toggles it on the GPU). Unbounded objects are evaluated everywhere: `plane`, `infcylinder`, `infcone`
 and `repeat` without `limit`. Prefer `repeat (c) limit (n)` and finite shapes for big scenes.
 
-Distance functions and operations follow [iquilezles.org/articles/distfunctions](https://iquilezles.org/articles/distfunctions/),
-`scenes/showcase.scene` places every one of them in a row. `scenes/parthenon.scene` is a Doric temple.
+Distance functions and operations follow [iquilezles.org/articles/distfunctions](https://iquilezles.org/articles/distfunctions/).
+
+- `scenes/showcase.scene` places every one of them in a row.
+- `scenes/parthenon.scene` is a Doric temple,
+- `scenes/escher.scene` builds the stairs of M. C. Escher (Relativity, Ascending and Descending, Waterfall, Belvedere),
+- `scenes/menger.scene` is a Menger sponge of four levels with tunnels to walk through.
 
 ### Primitives
 
