@@ -15,6 +15,6 @@ void main()
 	gl_Position = vec4(x, y, 0, 1);
 
 	// shadertoy compatibility
-	texCoord *= iResolution;
+	texCoord *= iResolution.xy;
 	fragCoord = texCoord;
 }
