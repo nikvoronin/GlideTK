@@ -14,6 +14,6 @@ F11 - Fullscreen/Normal
 
 F7 - Bounding volume hierarchy on/off (on by default, off evaluates every object to compare the speed)
 
-F5 - Reload scene (`scenes/default.scene` next to the executable, or the file passed as the first argument: `GldeTK.exe scenes/showcase.scene`)
+F5 - Reload scene (`scenes/default.scene` next to the executable, or the file passed as the first argument: `GldeTK.exe scenes/showcase.scene`, `GldeTK.exe scenes/parthenon.scene`)
 
 Scene language: [src/language.txt](src/language.txt), distance functions from [iquilezles.org](https://iquilezles.org/articles/distfunctions/)
