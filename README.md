@@ -1,8 +1,15 @@
 # GlideTK
 
-Project is no longer active. Shaders are partially compatible with [ShaderToy](https://www.shadertoy.com/).
+Real-time SDF ray marcher, FPS like playground with physics written in C# on .NET 10 and OpenTK.
+
+> [!NOTE]
+> Project is no longer active
 
 ![screenshot](https://user-images.githubusercontent.com/11328666/51066117-7be35400-1619-11e9-83e8-7d1c5bf00d12.png)
+
+You describe a 3D scene in a small text language (.scene files): primitives, domain operations such as translate, rotate, repeat and twist, and combinations such as union, subtract and smooth blend. The scene is compiled into one compact program that both the fragment shader and the CPU physics evaluate. That is why you can walk through exactly what you see: the player collides as a sphere against the same distance field that is rendered.
+
+It supports BVH culling on the GPU and CPU, soft shadows, a bitmap-font HUD, and F5 live scene reload. It ships with showcase scenes: a Doric temple, an Escher-style stair hall, and a walkable Menger sponge.
 
 - WASD + mouse-look
 - SPACE - Up
@@ -18,7 +25,7 @@ Scene files live in `GlideTK/scenes/*.scene` and are copied next to the executab
 `GlideTK.exe` loads `scenes/default.scene`, or the file given as the first argument:
 
 ```shell
-./GlideTK.exe scenes/showcase.scene
+GlideTK.exe scenes/showcase.scene
 ```
 
 `F5` reloads the scene at runtime. The parsed scene is compiled every physics tick into a vec4 program
@@ -83,7 +90,7 @@ Transform the position for the elements of the block, the block is a union.
 | Syntax | Notes |
 | --- | --- |
 | `translate (x, y, z) { ... }` | |
-| `rotate (degX, degY, degZ) { ... }` | object rotation R = Rz * Ry * Rx |
+| `rotate (degX, degY, degZ) { ... }` | `object rotation R = Rz * Ry * Rx` |
 | `scale s { ... }` | |
 | `repeat (cx, cy, cz) { ... }` | infinite, cells centered at c/2, period 0 disables an axis |
 | `repeat (cx, cy, cz) limit (lx, ly, lz) { ... }` | 2 * l + 1 copies per axis centered at the origin |
@@ -144,7 +151,7 @@ translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }
 ## History
 
 | Date | Change |
-|---|---|
+| --- | --- |
 | 08.10.2026 | Drawing text: 8x8 bitmap font, instanced HUD with stats, F1 help and scene errors |
 | 07.10.2026 | Player collides as a sphere with the scene SDF: substeps, push-out from the closest contact, gravity |
 | 12.01.2026 | Map in UBO with primitives: scene language (scenes/*.scene) shared by GPU and physics |
