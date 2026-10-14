@@ -1,3 +1,4 @@
+using GldeTK.Scene.Defs;
 using GldeTK.Scene.Expr;
 using GldeTK.Scene.Nodes;
 using System;
@@ -9,14 +10,14 @@ namespace GldeTK.Scene;
 /// Recursive descent parser of the scene language:
 ///
 ///   scene  := node*
-///   node   := prim | domain '{' node+ '}' | csg '{' node+ '}'
-///   prim   := sphere arg | box vec | plane vec arg | cylinder arg arg | torus arg arg   ['color' vec]
-///   domain := translate vec | repeat vec | rotate vec | scale arg
-///   csg    := union | subtract | intersect | smooth arg
+///   node   := prim args ['color' vec] | block args '{' node+ '}'
+///   args   := (arg | vec)*                as declared in <see cref="SceneDefs"/>
 ///   vec    := '(' expr ',' expr ',' expr ')'
 ///   arg    := number | 't' | 'pi' | func '(' expr, ... ')' | '(' expr ')' | '-' arg
 ///   expr   := term (('+' | '-') term)*
 ///   term   := arg (('*' | '/') arg)*
+///
+/// "repeat vec 'limit' vec" is the limited repetition.
 ///
 /// Arguments of a node are separated by spaces, so a compound arithmetic argument
 /// must be parenthesized: "sphere (1 + 0.2 * sin(t))". Inside a vec any expression is allowed.
@@ -74,40 +75,26 @@ public class SceneParser
     {
         Token token = Expect(TokenKind.Ident, "scene element");
 
-        return token.Text switch
-        {
-            "sphere" => ParsePrim(token, PrimKind.Sphere, p => p.A = ParseArg()),
-            "box" => ParsePrim(token, PrimKind.Box, p => p.V = ParseVec()),
-            "plane" => ParsePrim(token, PrimKind.Plane, p => { p.V = ParseVec(); p.A = ParseArg(); }),
-            "cylinder" => ParsePrim(token, PrimKind.Cylinder, p => { p.A = ParseArg(); p.B = ParseArg(); }),
-            "torus" => ParsePrim(token, PrimKind.Torus, p => { p.A = ParseArg(); p.B = ParseArg(); }),
-            "translate" => ParseDomain(token, DomainKind.Translate, d => d.V = ParseVec()),
-            "repeat" => ParseDomain(token, DomainKind.Repeat, d => d.V = ParseVec()),
-            "rotate" => ParseDomain(token, DomainKind.Rotate, d => d.V = ParseVec()),
-            "scale" => ParseDomain(token, DomainKind.Scale, d => d.A = ParseArg()),
-            "union" => ParseCsg(token, CsgKind.Union),
-            "subtract" => ParseCsg(token, CsgKind.Subtract),
-            "intersect" => ParseCsg(token, CsgKind.Intersect),
-            "smooth" => ParseCsg(token, CsgKind.Smooth),
+        if (SceneDefs.Primitives.TryGetValue(token.Text, out PrimDef prim))
+            return ParsePrim(token, prim);
 
-            _ => throw Error(token, $"Unknown scene element '{token.Text}'"),
-        };
+        if (SceneDefs.Blocks.TryGetValue(token.Text, out BlockDef block))
+            return ParseBlockNode(token, block);
+
+        throw Error(token, $"Unknown scene element '{token.Text}'");
     }
 
-    PrimNode ParsePrim(
-        Token token, 
-        PrimKind kind, 
-        Action<PrimNode> parseArgs)
+    PrimNode ParsePrim(Token token, PrimDef def)
     {
-        var node = new PrimNode 
-        { 
-            Kind = kind, 
-            Line = token.Line 
+        var node = new PrimNode
+        {
+            Def = def,
+            Line = token.Line
         };
 
-        parseArgs(node);
+        ParseArgs(def.Args, node.Scalars, node.Vectors);
 
-        if (Peek.Kind == TokenKind.Ident 
+        if (Peek.Kind == TokenKind.Ident
             && Peek.Text == "color")
         {
             Next();
@@ -117,39 +104,42 @@ public class SceneParser
         return node;
     }
 
-    DomainNode ParseDomain(
-        Token token, 
-        DomainKind kind, 
-        Action<DomainNode> parseArgs)
+    BlockNode ParseBlockNode(Token token, BlockDef def)
     {
-        var node = new DomainNode 
-        { 
-            Kind = kind, 
-            Line = token.Line 
-        };
-
-        parseArgs(node);
-        ParseBlock(token, node.Children);
-        
-        return node;
-    }
-
-    CsgNode ParseCsg(Token token, CsgKind kind)
-    {
-        var node = new CsgNode 
-        { 
-            Kind = kind, 
-            Line = token.Line 
-        };
-
-        if (kind == CsgKind.Smooth)
+        var node = new BlockNode
         {
-            node.K = ParseArg();
+            Def = def,
+            Line = token.Line
+        };
+
+        ParseArgs(def.Args, node.Scalars, node.Vectors);
+
+        if (def.PushOp == SceneOpcodes.REPEAT
+            && Peek.Kind == TokenKind.Ident
+            && Peek.Text == "limit")
+        {
+            Next();
+            node.Def = SceneDefs.RepeatLimited;
+            node.Vectors.Add(ParseVec());
         }
 
         ParseBlock(token, node.Children);
-        
+
         return node;
+    }
+
+    void ParseArgs(
+        ArgKind[] kinds,
+        List<ExprBase> scalars,
+        List<Vec3Expr> vectors)
+    {
+        foreach (ArgKind kind in kinds)
+        {
+            if (kind == ArgKind.Vector)
+                vectors.Add(ParseVec());
+            else
+                scalars.Add(ParseArg());
+        }
     }
 
     void ParseBlock(Token owner, List<SceneNode> children)

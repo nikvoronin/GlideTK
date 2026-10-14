@@ -14,7 +14,8 @@ public class MainWindow : GameWindow
     readonly Physics physics;
     readonly Render render;
 
-    public MainWindow()
+    /// <param name="scenePath">Scene file, relative to the executable or absolute</param>
+    public MainWindow(string scenePath)
         : base(
             new GameWindowSettings { UpdateFrequency = Const.PHYSICS_UPDATE_FREQUENCY },
             new NativeWindowSettings
@@ -34,7 +35,7 @@ public class MainWindow : GameWindow
             new Vector3(-1, 0, 0),
             new Vector3(0, 1, 0));
 
-        scene = new SceneState(Const.SCENE_FILENAME);
+        scene = new SceneState(scenePath);
         physics = new Physics(scene);
         motionCtrl = new FpsController();
     }

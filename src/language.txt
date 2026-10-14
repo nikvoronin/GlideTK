@@ -2,32 +2,85 @@ GldeTK scene language
 =====================
 
 Scene files live in GldeTK/scenes/*.scene and are copied next to the executable.
+GldeTK.exe loads scenes/default.scene, or the file given as the first argument:
+	GldeTK.exe scenes/showcase.scene
 F5 reloads the scene at runtime. The parsed scene is compiled every physics tick
 into a vec4 program (see GldeTK/Scene/SceneOpcodes.cs), which is evaluated both by
 the CPU physics (Scene/SceneVM.cs) and by the shader (map() in shaders/fragment.c).
 
+Distance functions and operations follow https://iquilezles.org/articles/distfunctions/
+scenes/showcase.scene places every one of them in a row.
+
 ===PRIMITIVES
-Optional "color (r, g, b)" may follow the arguments.
+Centered at the origin. Optional "color (r, g, b)" may follow the arguments.
+Angles are in degrees.
 
 	sphere r
-	box (sx, sy, sz)			half sizes
-	plane (nx, ny, nz) dist		normal, offset along the normal
-	cylinder r halfHeight		along Y
-	torus R r					in XZ plane, big and small radius
+	box (sx, sy, sz)						half sizes
+	roundbox (sx, sy, sz) r					half sizes include the rounding r
+	boxframe (sx, sy, sz) e					edge thickness e
+	plane (nx, ny, nz) dist					normal, offset along the normal
+	torus R r								in XZ plane, big and small radius
+	cappedtorus angle R r					arc of +-angle in XY plane
+	link le r1 r2							chain link: half length, radius, thickness
+	infcylinder r							infinite, along Y
+	cylinder r h							along Y, h is the half height
+	segcylinder (a) (b) r					between points a and b
+	roundcylinder r rounding h				along Y, h is the half height
+	cone angle h							apex at the origin, opens down to y = -h
+	infcone angle							infinite, apex at the origin, opens down
+	cappedcone h r1 r2						along Y, half height h, bottom r1, top r2
+	segcone (a) (b) ra rb					between points a and b
+	solidangle angle r						sphere sector, opens up
+	cutsphere r h							sphere cut by the plane y = h, -r < h < r
+	cuthollowsphere r h thickness			shell cut by the plane y = h, -r < h < r
+	deathstar ra rb d						sphere ra minus sphere rb at distance d along X
+	roundcone r1 r2 h						along Y, bottom sphere r1 at 0, top sphere r2 at h
+	segroundcone (a) (b) r1 r2				between points a and b
+	ellipsoid (rx, ry, rz)					approximate distance
+	rhombus la lb h rounding				in XZ plane, half diagonals la lb, half height h
+	octahedron s
+	pyramid h								base 1 x 1 at y = 0, apex at y = h
+	hexprism r h							along Z, half length h
+	triprism r h							along Z, half length h
+	capsule (a) (b) r
+	vcapsule h r							from y = 0 to y = h
+	triangle (a) (b) (c)					unsigned, zero thickness
+	quad (a) (b) (c) (d)					unsigned, zero thickness, planar points in order
 
 ===DOMAIN OPERATIONS
 Transform the position for the elements of the block, the block is a union.
 
 	translate (x, y, z) { ... }
-	repeat (cx, cy, cz) { ... }	period per axis, 0 disables repetition along the axis
-	rotate (degX, degY, degZ) { ... }	object rotation R = Rz * Ry * Rx
+	rotate (degX, degY, degZ) { ... }		object rotation R = Rz * Ry * Rx
 	scale s { ... }
+	repeat (cx, cy, cz) { ... }				infinite, cells centered at c/2, period 0 disables an axis
+	repeat (cx, cy, cz) limit (lx, ly, lz) { ... }
+											2 * l + 1 copies per axis centered at the origin
+	mirror (x, y, z) { ... }				symmetry: abs() on the axes that are not 0
+	elongate (hx, hy, hz) { ... }			stretches the shape by h on each side
+	twist k { ... }							around Y, k radians per unit
+	bend k { ... }							in XY plane, k radians per unit
+	revolve o { ... }						revolves the XY cross-section (z = 0) around Y at radius o
+	extrude h { ... }						extrudes the XY cross-section (z = 0) along Z, half length h
+
+twist, bend and displace distort distances, keep their values moderate.
+
+===DISTANCE OPERATIONS
+Apply to the union of the block.
+
+	round r { ... }							rounds the shape by r (grows it by r)
+	onion thickness { ... }					hollow shell
+	displace amplitude frequency { ... }	adds amplitude * sin(f x) sin(f y) sin(f z)
 
 ===OBJECT OPERATIONS
 	union { a b ... }
-	subtract { a b ... }		a minus all the rest
+	subtract { a b ... }					a minus all the rest
 	intersect { a b ... }
-	smooth k { a b ... }		smooth union with radius k
+	xor { a b ... }
+	smooth k { a b ... }					smooth union with radius k
+	smoothsubtract k { a b ... }
+	smoothintersect k { a b ... }
 
 The top level of a file is an implicit union.
 
@@ -47,3 +100,4 @@ Comments start with # and last to the end of the line.
 	repeat (10, 10 + sin(t), 10) { sphere 1 color (1, 0.55, 0.45) }
 	subtract { box (2, 2, 2)  translate (0, 1, 0) { sphere 2.5 } }
 	smooth 0.5 { sphere 1  rotate (0, 90, 0) { torus 1 0.2 } }
+	translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }

@@ -1,13 +1,8 @@
 # GldeTK scene. Shared by the renderer (GPU) and the physics (CPU), F5 reloads it.
 #
-# Primitives (optional "color (r, g, b)" after arguments):
-#   sphere r | box (sx, sy, sz) | plane (nx, ny, nz) dist | cylinder r halfHeight | torus R r
-# Domain operations, apply to the block:
-#   translate (x, y, z) { } | repeat (cx, cy, cz) { } | rotate (degX, degY, degZ) { } | scale s { }
-#   repeat period 0 on an axis disables repetition along it
-# Combinations:
-#   union { } | subtract { first minus the rest } | intersect { } | smooth k { }
-# Expressions: numbers, t (physics time, s), pi, + - * /, sin cos abs min max.
+# The language is described in src/language.txt, scenes/showcase.scene shows every
+# primitive and operation (sphere, box, torus, cone, capsule, ... translate, rotate, repeat,
+# twist, bend, round, onion, subtract, smooth, ...).
 # Separate arguments are space-delimited, so wrap arithmetic in parentheses: sphere (1 + 0.2 * sin(t))
 
 plane (0, 1, 0) 0

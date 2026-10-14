@@ -1,14 +1,16 @@
+using GldeTK.Scene.Defs;
 using GldeTK.Scene.Expr;
+using System.Collections.Generic;
 
 namespace GldeTK.Scene.Nodes;
 
 /// <summary>
-/// sphere A | box V | plane V A | cylinder A B | torus A B
+/// A primitive, see <see cref="SceneDefs.Primitives"/>
 /// </summary>
 public sealed class PrimNode : SceneNode
 {
-    public PrimKind Kind;
-    public ExprBase A, B;
-    public Vec3Expr V;
-    public Vec3Expr Color;  // null -> default material
+    public PrimDef Def;
+    public List<ExprBase> Scalars = [];     // Scalar and Angle arguments in order
+    public List<Vec3Expr> Vectors = [];     // Vector arguments in order
+    public Vec3Expr Color;                  // null -> default material
 }
