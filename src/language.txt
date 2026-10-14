@@ -8,6 +8,12 @@ F5 reloads the scene at runtime. The parsed scene is compiled every physics tick
 into a vec4 program (see GldeTK/Scene/SceneOpcodes.cs), which is evaluated both by
 the CPU physics (Scene/SceneVM.cs) and by the shader (map() in shaders/fragment.c).
 
+Performance: unions and domain operations (translate, rotate, repeat, ...) are opened
+into separate objects, each with a bounding box in a BVH; objects whose box is farther
+than the nearest surface found so far are skipped (F7 toggles it on the GPU).
+Unbounded objects are evaluated everywhere: plane, infcylinder, infcone and repeat
+without limit. Prefer "repeat (c) limit (n)" and finite shapes for big scenes.
+
 Distance functions and operations follow https://iquilezles.org/articles/distfunctions/
 scenes/showcase.scene places every one of them in a row.
 

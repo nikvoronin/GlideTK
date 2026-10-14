@@ -19,8 +19,10 @@ public static class Const
     public const string UF_RESOLUTION = "iResolution";
     public const string UF_RAY_ORIGIN = "ro";
     public const string UF_PROJECTION_MATRIX = "camProj";
+    public const string UF_USE_BVH = "useBvh";
 
     public const int SCENE_STACK_DEPTH = 8;     // must match STACK_DEPTH in fragment.c
+    public const int BVH_STACK_DEPTH = 32;      // must match BVH_STACK_DEPTH in fragment.c
 
     public const float PLAYER_HIT_RADIUS = 1.0f;
 
@@ -28,6 +30,7 @@ public static class Const
     public const Keys INPUT_KEY_FULLSCREEN = Keys.F11;
     public const Keys INPUT_KEY_EXIT = Keys.Escape;
     public const Keys INPUT_KEY_RELOAD_SCENE = Keys.F5;
+    public const Keys INPUT_KEY_TOGGLE_BVH = Keys.F7;
 
     public const int DISPLAY_XGA_W = 1024;
     public const int DISPLAY_XGA_H = 768;

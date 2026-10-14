@@ -1,3 +1,4 @@
+using GldeTK.Scene.Bvh;
 using OpenTK.Mathematics;
 using System;
 
@@ -9,16 +10,85 @@ namespace GldeTK.Scene;
 /// </summary>
 public static class SceneVM
 {
+    static Vector2 Union(Vector2 a, Vector2 b) => 
+        a.X < b.X ? a : b;
+
+    /// <summary>
+    /// A box can lower the distance only when it is closer than the best distance or contains
+    /// the point: inside the box the distance can be negative
+    /// </summary>
+    static bool MayContribute(float boxDistance, float best) => 
+        boxDistance <= 0f 
+        || boxDistance < best;
+
+    static float BoxDistance(Vector4[] program, int bvh, int node, Vector3 p) =>
+        Aabb.Distance(
+            p, 
+            program[bvh + 2 * node].Xyz, 
+            program[bvh + 2 * node + 1].Xyz);
+
     /// <summary>Distance from pos to the scene surface.</summary>
     public static float Eval(Vector4[] program, Vector3 pos)
+    {
+        Vector4 header = program[0];
+        var best = new Vector2(SceneOpcodes.EMPTY_DISTANCE, 0f);
+
+        // unbounded leaves
+        int alwaysCount = (int)header.W;
+        for (int i = 0; i < alwaysCount; i++)
+        {
+            best = Union(best, EvalLeaf(program, (int)program[1 + i].X, (int)program[1 + i].Y, pos));
+        }
+
+        // bounded leaves: skip boxes not closer than the best distance found so far
+        int bvh = (int)header.Y;
+        int nodeCount = (int)header.Z;
+        Span<int> stack = stackalloc int[Const.BVH_STACK_DEPTH];
+        int sp = 0;
+        if (nodeCount > 0)
+            stack[sp++] = 0;
+
+        while (sp > 0)
+        {
+            int node = stack[--sp];
+            Vector4 lo = program[bvh + 2 * node];
+            Vector4 hi = program[bvh + 2 * node + 1];
+
+            if (!MayContribute(Aabb.Distance(pos, lo.Xyz, hi.Xyz), best.X))
+                continue;
+
+            if (lo.W < 0f)
+            {
+                best = Union(best, EvalLeaf(program, (int)-lo.W, (int)hi.W, pos));
+                continue;
+            }
+
+            // visit the nearer child first: push it last
+            int left = (int)lo.W, right = (int)hi.W;
+            float dl = BoxDistance(program, bvh, left, pos);
+            float dr = BoxDistance(program, bvh, right, pos);
+            int near = dl < dr ? left : right, far = dl < dr ? right : left;
+            float dNear = MathF.Min(dl, dr), dFar = MathF.Max(dl, dr);
+
+            if (MayContribute(dFar, best.X))
+                stack[sp++] = far;
+            
+            if (MayContribute(dNear, best.X))
+                stack[sp++] = near;
+        }
+
+        return best.X;
+    }
+
+    /// <summary>Runs the stack program of a leaf in [start, end), returns (distance, material)</summary>
+    static Vector2 EvalLeaf(Vector4[] program, int start, int end, Vector3 pos)
     {
         Span<Vector4> ps = stackalloc Vector4[Const.SCENE_STACK_DEPTH];   // xyz position, w scale
         Span<Vector2> ds = stackalloc Vector2[Const.SCENE_STACK_DEPTH];   // x distance, y material
         int pp = 0, dp = 0;
         ps[0] = new Vector4(pos, 1f);
 
-        int end = (int)program[0].X;
-        int pc = 1;
+        int pc = start;
 
         while (pc < end)
         {
@@ -54,7 +124,7 @@ public static class SceneVM
             pc += (int)h.Y;
         }
 
-        return dp > 0 ? ds[0].X : SceneOpcodes.EMPTY_DISTANCE;
+        return ds[0];
     }
 
     static float Primitive(int op, Vector4[] program, int pc, Vector3 p)
@@ -102,16 +172,19 @@ public static class SceneVM
     }
 
     /// <summary>GLSL mod(): x - y * floor(x / y)</summary>
-    static float Mod(float x, float y) => x - y * MathF.Floor(x / y);
+    static float Mod(float x, float y) => 
+        x - y * MathF.Floor(x / y);
 
     /// <summary>mod(p, c) - c/2, zero period is not repeated</summary>
-    static float Rep(float p, float c) => c != 0f ? Mod(p, c) - 0.5f * c : p;
+    static float Rep(float p, float c) => 
+        c != 0f ? Mod(p, c) - 0.5f * c : p;
 
     /// <summary>p - c * clamp(round(p / c), -l, l), zero period is not repeated</summary>
     static float RepLimited(float p, float c, float l) =>
         c != 0f ? p - c * Sdf.Clamp(MathF.Floor(p / c + 0.5f), -l, l) : p;
 
-    static float Mirror(float p, float axis) => axis != 0f ? MathF.Abs(p) : p;
+    static float Mirror(float p, float axis) => 
+        axis != 0f ? MathF.Abs(p) : p;
 
     /// <summary>Returns the new (position, scale)</summary>
     static Vector4 Domain(int op, Vector4[] program, int pc, Vector3 p, float s)
@@ -126,7 +199,11 @@ public static class SceneVM
 
             case SceneOpcodes.REPEAT:
                 Vector3 c = V(0);
-                return new Vector4(Rep(p.X, c.X), Rep(p.Y, c.Y), Rep(p.Z, c.Z), s);
+                return new Vector4(
+                    Rep(p.X, c.X), 
+                    Rep(p.Y, c.Y), 
+                    Rep(p.Z, c.Z), 
+                    s);
 
             case SceneOpcodes.REPEAT_LIMITED:
                 Vector3 period = V(0), limit = V(1);
@@ -148,7 +225,11 @@ public static class SceneVM
 
             case SceneOpcodes.MIRROR:
                 Vector3 axes = V(0);
-                return new Vector4(Mirror(p.X, axes.X), Mirror(p.Y, axes.Y), Mirror(p.Z, axes.Z), s);
+                return new Vector4(
+                    Mirror(p.X, axes.X),
+                    Mirror(p.Y, axes.Y), 
+                    Mirror(p.Z, axes.Z), 
+                    s);
 
             case SceneOpcodes.ELONGATE:
                 Vector3 e = V(0);
@@ -161,30 +242,57 @@ public static class SceneVM
             case SceneOpcodes.TWIST:
             {
                 float a = S.X * p.Y;
-                float co = MathF.Cos(a), si = MathF.Sin(a);
-                return new Vector4(co * p.X - si * p.Z, p.Y, si * p.X + co * p.Z, s);
+                float co = MathF.Cos(a), 
+                    si = MathF.Sin(a);
+
+                return new Vector4(
+                    co * p.X - si * p.Z, 
+                    p.Y, 
+                    si * p.X + co * p.Z, 
+                    s);
             }
 
             case SceneOpcodes.BEND:
             {
                 float a = S.X * p.X;
-                float co = MathF.Cos(a), si = MathF.Sin(a);
-                return new Vector4(co * p.X - si * p.Y, si * p.X + co * p.Y, p.Z, s);
+                float co = MathF.Cos(a), 
+                    si = MathF.Sin(a);
+
+                return new Vector4(
+                    co * p.X - si * p.Y, 
+                    si * p.X + co * p.Y, 
+                    p.Z, 
+                    s);
             }
 
             case SceneOpcodes.REVOLVE:
-                return new Vector4(p.Xz.Length - S.X, p.Y, 0f, s);
+                return new Vector4(
+                    p.Xz.Length - S.X, 
+                    p.Y, 
+                    0f, 
+                    s);
 
             case SceneOpcodes.EXTRUDE_SLICE:
-                return new Vector4(p.X, p.Y, 0f, s);
+                return new Vector4(
+                    p.X, 
+                    p.Y, 
+                    0f, 
+                    s);
 
             default:
-                throw new InvalidOperationException($"Bad scene opcode {op} at {pc}");
+                throw new InvalidOperationException(
+                    $"Bad scene opcode {op} at {pc}");
         }
     }
 
     /// <summary>Modifies the top distance, p and s are the block's position and scale</summary>
-    static Vector2 Post(int op, Vector4[] program, int pc, Vector2 d, Vector3 p, float s)
+    static Vector2 Post(
+        int op, 
+        Vector4[] program, 
+        int pc, 
+        Vector2 d, 
+        Vector3 p, 
+        float s)
     {
         Vector4 S = program[pc + 1];
 
@@ -203,10 +311,15 @@ public static class SceneVM
 
             case SceneOpcodes.EXTRUDE:
                 var w = new Vector2(d.X, (MathF.Abs(p.Z) - S.X) * s);
-                return new Vector2(MathF.Min(MathF.Max(w.X, w.Y), 0f) + Sdf.Max(w, 0f).Length, d.Y);
+
+                return new Vector2(
+                    MathF.Min(MathF.Max(w.X, w.Y), 0f) 
+                        + Sdf.Max(w, 0f).Length, 
+                    d.Y);
 
             default:
-                throw new InvalidOperationException($"Bad scene opcode {op} at {pc}");
+                throw new InvalidOperationException(
+                    $"Bad scene opcode {op} at {pc}");
         }
     }
 
@@ -236,17 +349,25 @@ public static class SceneVM
 
             case SceneOpcodes.XOR:
                 return new Vector2(
-                    MathF.Max(MathF.Min(a.X, b.X), -MathF.Max(a.X, b.X)),
+                    MathF.Max(
+                        MathF.Min(a.X, b.X), 
+                        -MathF.Max(a.X, b.X)),
                     a.X < b.X ? a.Y : b.Y);
 
             case SceneOpcodes.SMOOTH_UNION:
                 return SmoothMin(a, b, k);
 
             case SceneOpcodes.SMOOTH_SUBTRACT:
-                return new Vector2(-SmoothMin(new Vector2(-a.X, a.Y), b, k).X, a.Y);
+                return new Vector2(
+                    -SmoothMin(new Vector2(-a.X, a.Y), b, k).X, 
+                    a.Y);
 
             case SceneOpcodes.SMOOTH_INTERSECT:
-                Vector2 r = SmoothMin(new Vector2(-a.X, a.Y), new Vector2(-b.X, b.Y), k);
+                Vector2 r = SmoothMin(
+                    new Vector2(-a.X, a.Y), 
+                    new Vector2(-b.X, b.Y), 
+                    k);
+
                 return new Vector2(-r.X, r.Y);
 
             default:

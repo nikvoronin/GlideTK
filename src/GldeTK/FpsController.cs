@@ -10,7 +10,7 @@ public class FpsController
     /// <summary>
     /// 0.1 is slower than 0.9
     /// </summary>
-    float mouse_sensitivity = 0.1f;
+    float mouse_sensitivity = 0.05f;
 
     /// <summary>
     /// From 1 to 100. 10 by default

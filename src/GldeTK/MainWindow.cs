@@ -108,6 +108,9 @@ public class MainWindow : GameWindow
         if (keyboard.IsKeyPressed(Const.INPUT_KEY_RELOAD_SCENE))
             scene.Reload();
 
+        if (keyboard.IsKeyPressed(Const.INPUT_KEY_TOGGLE_BVH))
+            render.Bvh = !render.Bvh;
+
         if (keyboard.IsKeyPressed(Const.INPUT_KEY_FULLSCREEN))
         {
             WindowState = WindowState == WindowState.Fullscreen
@@ -127,11 +130,12 @@ public class MainWindow : GameWindow
         if (physics.GlobalTime - s1_timer > 1)
         {
             Title = $"{Const.APP_NAME}, {Const.RELEASE_DATE} — " +
-                $"{(delta * 1000).ToString("0.")}ms, " +
-                $"{(1.0 / delta).ToString("0")}fps " +
-                $"// {camera.Origin.X.ToString("0.0")} " +
-                    $": {camera.Origin.Y.ToString("0.0")} " +
-                    $": {camera.Origin.Z.ToString("0.0")} "
+                $"{delta * 1000:0.}ms, " +
+                $"{1.0 / delta:0}fps " +
+                $"// {camera.Origin.X:0.0} " +
+                    $": {camera.Origin.Y:0.0} " +
+                    $": {camera.Origin.Z:0.0} "
+                + (render.Bvh ? "// BVH on" : "// BVH off")
                 + (scene.LastError != null ? $" // {scene.LastError}" : "");
 
             s1_timer = physics.GlobalTime;

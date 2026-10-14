@@ -3,8 +3,15 @@ namespace GldeTK.Scene;
 /// <summary>
 /// Compiled scene program layout. Keep in sync with the interpreter in shaders/fragment.c.
 ///
-/// data[0] = (programEnd, materialBase, 0, 0); instructions occupy [1, programEnd),
-/// materials (rgb) occupy [materialBase, data.Length).
+/// The scene is a union of leaves, each leaf is a separate stack program:
+///   data[0]                              (materialBase, bvhStart, bvhNodeCount, alwaysCount)
+///   data[1 .. 1 + alwaysCount)           (start, end, 0, 0) of unbounded leaves, always evaluated
+///   leaf programs                        instructions in [start, end)
+///   data[bvhStart ..)                    BVH nodes of bounded leaves, 2 vec4 each, root is node 0:
+///                                        (min.xyz, left) (max.xyz, right), a leaf node has (min.xyz, -start) (max.xyz, end)
+///   data[materialBase ..)                material colors (rgb)
+/// A BVH node is skipped when the point is outside its box and the box is not closer than the best
+/// distance found so far: the shapes lie inside their boxes (see Bvh/SceneBounds.cs).
 ///
 /// Every instruction is
 ///   header  (op, length, material, 0)   length counts vec4 including the header

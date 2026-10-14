@@ -18,7 +18,13 @@ public class Render
         uf_iResolution,
         uf_CamRo,
         um3_CamProj,
+        uf_UseBvh,
         ubo_GlobalMap;
+
+    /// <summary>
+    /// Skip scene objects by their bounding boxes, off evaluates every object (to compare the speed)
+    /// </summary>
+    public bool Bvh { get; set; } = true;
 
     int mapBlockSize;
     int uploadedSceneVersion = -1;
@@ -92,6 +98,7 @@ public class Render
         uf_iResolution = GetUniformLocation(Const.UF_RESOLUTION);
         uf_CamRo = GetUniformLocation(Const.UF_RAY_ORIGIN);
         um3_CamProj = GetUniformLocation(Const.UF_PROJECTION_MATRIX);
+        uf_UseBvh = GetUniformLocation(Const.UF_USE_BVH);
     }
 
     public void Start()
@@ -182,6 +189,7 @@ public class Render
         GL.Uniform3(uf_iResolution, width, height, 0.0f);
         GL.Uniform3(uf_CamRo, camera.Origin);
         GL.UniformMatrix3(um3_CamProj, false, ref camera.Projection);
+        GL.Uniform1(uf_UseBvh, Bvh ? 1 : 0);
 
         UploadScene(scene);
 

@@ -8,7 +8,7 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <Product>GldeTK</Product>
-    <Copyright>Copyright © Nikolai Voronin 2016-2019</Copyright>
+    <Copyright>Copyright © Nikolai Voronin 2016-2026</Copyright>
     <OutputPath>..\..\bin\$(Configuration)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
@@ -21,6 +21,15 @@
     <!-- other shaders\fragment_*.c are kept as an archive of the pre-scene-language era -->
     <EmbeddedResource Include="shaders\fragment.c;shaders\vertex.c" />
     <None Include="scenes\*.scene" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="scenes\default.scene">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="scenes\showcase.scene">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -4,10 +4,12 @@ uniform float iGlobalTime;
 uniform vec3 iResolution;
 uniform vec3 ro;	// camera ray origin
 uniform mat3 camProj;	// camera projection matrix
+uniform int useBvh;	// 0: evaluate every leaf, to compare the speed
 
 // Compiled scene program, uploaded by Render from SceneState (see Scene/SceneOpcodes.cs).
-// g_map[0] = (programEnd, materialBase, 0, 0), instructions in [1, programEnd),
-// material colors (rgb) start at materialBase.
+// g_map[0] = (materialBase, bvhStart, bvhNodeCount, alwaysCount),
+// g_map[1 .. 1 + alwaysCount) = (start, end) of unbounded leaves, then leaf programs,
+// BVH nodes (min.xyz, left | -start) (max.xyz, right | end), material colors (rgb).
 uniform SdElements
 {
 	vec4 g_map[1024];	// Const.UBO_SDELEMENTSMAP_BLOCKCOUNT
@@ -17,6 +19,7 @@ in vec2 fragCoord;
 out vec4 fragColor;
 
 #define STACK_DEPTH 8	// Const.SCENE_STACK_DEPTH
+#define BVH_STACK_DEPTH 32	// Const.BVH_STACK_DEPTH
 #define EMPTY_DISTANCE 1e10
 
 // opcodes, keep in sync with Scene/SceneOpcodes.cs
@@ -583,8 +586,8 @@ vec2 opFold(int op, vec2 a, vec2 b, float k)
 	return a;
 }
 
-// Returns (distance, material id).
-vec2 map(in vec3 pos)
+// Runs the stack program of a leaf in [start, end), returns (distance, material id)
+vec2 evalLeaf(int start, int end, vec3 pos)
 {
 	vec4 ps[STACK_DEPTH];	// xyz position, w scale
 	vec2 ds[STACK_DEPTH];	// x distance, y material
@@ -592,8 +595,7 @@ vec2 map(in vec3 pos)
 	int dp = 0;
 	ps[0] = vec4(pos, 1.0);
 
-	int end = int(g_map[0].x);
-	int pc = 1;
+	int pc = start;
 
 	while (pc < end)
 	{
@@ -629,12 +631,96 @@ vec2 map(in vec3 pos)
 		pc += int(h.y);
 	}
 
-	return dp > 0 ? ds[0] : vec2(EMPTY_DISTANCE, 0.0);
+	return ds[0];
+}
+
+vec2 opUnion(vec2 a, vec2 b)
+{
+	return a.x < b.x ? a : b;
+}
+
+// a box can lower the distance only when it is closer than the best distance or contains
+// the point: inside the box the distance can be negative
+bool mayContribute(float boxDist, float best)
+{
+	return boxDist <= 0.0 || boxDist < best;
+}
+
+float boxDistance(vec3 p, vec3 bmin, vec3 bmax)
+{
+	return length(max(max(bmin - p, p - bmax), 0.0));
+}
+
+float nodeDistance(int bvh, int node, vec3 p)
+{
+	return boxDistance(p, g_map[bvh + 2 * node].xyz, g_map[bvh + 2 * node + 1].xyz);
+}
+
+// Scene distance, mirror of SceneVM.Eval. Returns (distance, material id).
+vec2 map(in vec3 pos)
+{
+	vec2 best = vec2(EMPTY_DISTANCE, 0.0);
+
+	// unbounded leaves
+	int alwaysCount = int(g_map[0].w);
+	for (int i = 0; i < alwaysCount; i++)
+		best = opUnion(best, evalLeaf(int(g_map[1 + i].x), int(g_map[1 + i].y), pos));
+
+	int bvh = int(g_map[0].y);
+	int nodeCount = int(g_map[0].z);
+
+	if (useBvh == 0)
+	{
+		for (int node = 0; node < nodeCount; node++)
+		{
+			vec4 lo = g_map[bvh + 2 * node];
+			if (lo.w < 0.0)
+				best = opUnion(best, evalLeaf(int(-lo.w), int(g_map[bvh + 2 * node + 1].w), pos));
+		}
+		return best;
+	}
+
+	// bounded leaves: skip boxes not closer than the best distance found so far
+	int stack[BVH_STACK_DEPTH];
+	int sp = 0;
+	if (nodeCount > 0)
+		stack[sp++] = 0;
+
+	while (sp > 0)
+	{
+		int node = stack[--sp];
+		vec4 lo = g_map[bvh + 2 * node];
+		vec4 hi = g_map[bvh + 2 * node + 1];
+
+		if (!mayContribute(boxDistance(pos, lo.xyz, hi.xyz), best.x))
+			continue;
+
+		if (lo.w < 0.0)
+		{
+			best = opUnion(best, evalLeaf(int(-lo.w), int(hi.w), pos));
+			continue;
+		}
+
+		// visit the nearer child first: push it last
+		int left = int(lo.w);
+		int right = int(hi.w);
+		float dl = nodeDistance(bvh, left, pos);
+		float dr = nodeDistance(bvh, right, pos);
+		int nearNode = dl < dr ? left : right;
+		int farNode = dl < dr ? right : left;
+
+		if (mayContribute(max(dl, dr), best.x))
+			stack[sp++] = farNode;
+		if (mayContribute(min(dl, dr), best.x))
+			stack[sp++] = nearNode;
+	}
+
+	return best;
 }
 
 vec3 materialColor(float id)
 {
-	return g_map[int(g_map[0].y) + int(id)].rgb;
+	return g_map[int(g_map[0].x) + int(id)].rgb;
 }
 
 vec2 castRay(in vec3 ro, in vec3 rd)
