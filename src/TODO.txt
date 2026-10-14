@@ -1,9 +1,9 @@
 ===TODO
 - Drawing text
-- Phys-rays projects as a dot but player is a sphere. Should project as a sphere or better as a bunch of rays
 
 
 ===DONE
+14.10.2026	Player collides as a sphere with the scene SDF: substeps, push-out from the closest contact, gravity
 14.10.2026	Map in UBO with primitives: scene language (scenes/*.scene) shared by GPU and physics
 14.10.2026	Translate iGlobalTimer to the Phys engine (single physics.GlobalTime)
 14.10.2026	Delta to FpsController

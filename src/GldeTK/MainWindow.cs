@@ -53,35 +53,15 @@ public class MainWindow : GameWindow
         // update player input (keyboard_wasd+space+shift + mouse-look)
         Ray motionStep = motionCtrl.Update(delta, camera.RayCopy, KeyboardState, MouseState);
 
-        // gravity free fall
-        Vector3 freeFallVector = physics.Gravity(
-            delta,
-            camera.RayCopy,
-            Const.PLAYER_HIT_RADIUS,
-            motionStep.Origin.Y > 0
-            );
-
-        motionStep.Origin += freeFallVector;
-
-        // wall collide
-        float sd = physics.CastRay(
+        // player sphere: gravity, collisions and sliding along the surfaces
+        Vector3 center = physics.Step(
             camera.Origin,
-            Vector3.NormalizeFast(motionStep.Origin)
-            );
+            motionStep.Origin,
+            delta,
+            Const.PLAYER_HIT_RADIUS,
+            flying: motionStep.Origin.Y > 0);
 
-        // when hit the wall
-        if (sd <= Const.PLAYER_HIT_RADIUS)
-        {
-            camera.Target = motionStep.Target;    // view only
-            // smooth wall sliding
-            Vector3 hitPoint = camera.Origin + motionStep.Origin * Const.PLAYER_HIT_RADIUS;
-            Vector3 norm = physics.GetSurfaceNormal(hitPoint);
-            Vector3 invNorm = -norm;
-            invNorm *= (motionStep.Origin * norm).LengthFast;
-
-            motionStep.Origin -= invNorm;
-        }
-
+        motionStep.Origin = center - camera.Origin;
         camera.Translate(motionStep);
 
         UpdateWindowKeys(KeyboardState);
