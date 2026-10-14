@@ -5,7 +5,7 @@ Real-time SDF ray marcher, FPS like playground with physics written in C# on .NE
 > [!NOTE]
 > Project is no longer active
 
-![screenshot](https://user-images.githubusercontent.com/11328666/51066117-7be35400-1619-11e9-83e8-7d1c5bf00d12.png)
+![glidetk-default](https://github.com/user-attachments/assets/92e2c54d-83a7-4ba7-a47d-60367d42ecd0)
 
 You describe a 3D scene in a small text language (.scene files): primitives, domain operations such as translate, rotate, repeat and twist, and combinations such as union, subtract and smooth blend. The scene is compiled into one compact program that both the fragment shader and the CPU physics evaluate. That is why you can walk through exactly what you see: the player collides as a sphere against the same distance field that is rendered.
 
@@ -43,6 +43,10 @@ Distance functions and operations follow [iquilezles.org/articles/distfunctions]
 - `scenes/parthenon.scene` is a Doric temple,
 - `scenes/escher.scene` builds the stairs of M. C. Escher (Relativity, Ascending and Descending, Waterfall, Belvedere),
 - `scenes/menger.scene` is a Menger sponge of four levels with tunnels to walk through.
+
+| Parthenon | Escher-style | Menger Sponge |
+| --- | --- | --- |
+|<img width=300 src="https://github.com/user-attachments/assets/dcdc0f6d-3dae-4fd7-abd4-8e75053a4a61">|<img width=300 src="https://github.com/user-attachments/assets/b138c660-8594-46e4-849b-b85c14adb6a7">|<img width=300 src="https://github.com/user-attachments/assets/ff20dba3-bbd0-4cd6-8d3e-2e331967c889">|
 
 ### Primitives
 
@@ -150,14 +154,21 @@ translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }
 
 ## History
 
-| Date | Change |
-| --- | --- |
-| 08.10.2026 | Drawing text: 8x8 bitmap font, instanced HUD with stats, F1 help and scene errors |
-| 07.10.2026 | Player collides as a sphere with the scene SDF: substeps, push-out from the closest contact, gravity |
-| 12.01.2026 | Map in UBO with primitives: scene language (scenes/*.scene) shared by GPU and physics |
-| 12.01.2026 | Translate iGlobalTimer to the Phys engine (single physics.GlobalTime) |
-| 01.01.2026 | Delta to FpsController |
-| 27.12.2017 16:15 | Made the FpsController class |
-| 27.12.2017 13:37 | Made the Camera class |
-| 26.12.2017 16:35 | Extract SetCamera from shader to the CPU and update matrix only if camera changes its position or target |
-| 02.12.2017 14:42 | Print coordinates |
+### 2026
+
+- Oct 8. Drawing text: 8x8 bitmap font, instanced HUD with stats, F1 help and scene errors.
+- Oct 7. Player collides as a sphere with the scene SDF: substeps, push-out from the closest contact, gravity.
+- Jan 12:
+  - Map in UBO with primitives: scene language (scenes/*.scene) shared by GPU and physics.
+  - Translate iGlobalTimer to the Phys engine (single physics.GlobalTime).
+- Jan 1 🎄 Delta to FpsController.
+
+### 2017
+
+![a long long time ago in a galaxy far far away](https://user-images.githubusercontent.com/11328666/51066117-7be35400-1619-11e9-83e8-7d1c5bf00d12.png)
+
+- Dec 27:
+  - 16:15. Made the FpsController class.
+  - 13:37. Made the Camera class.
+- Dec 26, 16:35. Extract SetCamera from shader to the CPU and update matrix only if camera changes its position or target.
+- Dec 2, 14:42. Print coordinates.
