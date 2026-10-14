@@ -58,6 +58,6 @@ translate (0, 1.5, -16) {
     translate (28, 0, 0) { extrude 0.3 { octahedron 1 } }
     translate (32, 0, 0) { displace 0.1 6 { sphere 1 } }
     translate (36, 0, 0) { mirror (1, 0, 0) { translate (0.8, 0, 0) { sphere 0.5 } } }
-    translate (40, -1, 0) { repeat (1.2, 0, 1.2) limit (1, 0, 1) { sphere 0.4 } }
-    translate (44, 0, 0) { rotate (0, 45, 30) { box (1, 0.3, 0.6) } }
+    translate (40, -1, 0) { repeat (sin(t)*1.5, 0, sin(t)*1.5) limit (1, 0, 1) { sphere 0.4 } }
+    translate (44, 0, 0) { rotate (0, sin(t)*180, 30) { box (1, 0.3, 0.6) } }
 }
