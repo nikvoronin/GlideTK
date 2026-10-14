@@ -229,8 +229,8 @@ translate (-14, 0, 18) {
     }
 
     # the mill wheel turning in the stream
-    translate (1.2, 1.6, 0) {
-        rotate (0, 0, (t * 40)) {
+    translate (0.8, 1.6, 0) {
+        rotate (0, 0, (-t * 40)) {
             round 0.02 {
                 rotate (90, 0, 0) {
                     torus 1.4 0.1 color (0.45, 0.33, 0.22)

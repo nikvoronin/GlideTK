@@ -5,7 +5,8 @@ using System;
 namespace GlideTK.Scene;
 
 /// <summary>
-/// CPU interpreter of a compiled scene program. Mirror of map() in shaders/fragment.c:
+/// CPU interpreter of a compiled scene program. Mirror of map() in shaders/fragment.c 
+/// and of the generated shape functions (Glsl/GlslOps.cs): 
 /// any change here must be repeated there.
 /// </summary>
 public static class SceneVM
@@ -14,8 +15,9 @@ public static class SceneVM
         a.X < b.X ? a : b;
 
     /// <summary>
-    /// A box can lower the distance only when it is closer than the best distance or contains
-    /// the point: inside the box the distance can be negative
+    /// A box can lower the distance only when it is closer 
+    /// than the best distance or contains the point: 
+    /// inside the box the distance can be negative
     /// </summary>
     static bool MayContribute(float boxDistance, float best) => 
         boxDistance <= 0f 

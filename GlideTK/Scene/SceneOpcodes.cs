@@ -1,7 +1,8 @@
 namespace GlideTK.Scene;
 
 /// <summary>
-/// Compiled scene program layout. Keep in sync with the interpreter in shaders/fragment.c.
+/// Compiled scene program layout. The CPU interprets it (SceneVM), the shader runs the GLSL generated
+/// from the instruction sequences (Glsl/SceneGlsl.cs): keep both in sync.
 ///
 /// The scene is a union of leaves, each leaf is a separate stack program:
 ///   data[0]                              (materialBase, bvhStart, bvhNodeCount, alwaysCount)
@@ -14,7 +15,8 @@ namespace GlideTK.Scene;
 /// distance found so far: the shapes lie inside their boxes (see Bvh/SceneBounds.cs).
 ///
 /// Every instruction is
-///   header  (op, length, material, 0)   length counts vec4 including the header
+///   header  (op, length, material, shape)   length counts vec4 including the header, shape is set in the
+///                                       first instruction of a leaf: the id of its instruction sequence
 ///   S       (s0, s1, s2, s3)            scalar arguments, present when the instruction has any arguments
 ///   V0..Vn  (x, y, z, 0)                vector arguments
 /// Angles are passed as (sin, cos) pairs of scalars.
