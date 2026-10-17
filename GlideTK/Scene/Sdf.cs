@@ -17,6 +17,9 @@ public static class Sdf
 
     public static float Clamp(float x, float a, float b) => MathF.Min(MathF.Max(x, a), b);
 
+    /// <summary>GLSL mod(): x - y * floor(x / y)</summary>
+    public static float Mod(float x, float y) => x - y * MathF.Floor(x / y);
+
     public static Vector2 Abs(Vector2 v) => new(MathF.Abs(v.X), MathF.Abs(v.Y));
 
     public static Vector3 Abs(Vector3 v) => new(MathF.Abs(v.X), MathF.Abs(v.Y), MathF.Abs(v.Z));
@@ -337,5 +340,73 @@ public static class Sdf
                 Dot2(ad * Clamp(Vector3.Dot(ad, pd) / Dot2(ad), 0f, 1f) - pd))
             :
             Vector3.Dot(nor, pa) * Vector3.Dot(nor, pa) / Dot2(nor));
+    }
+
+    // Fractals -----------------------------------------------------------------------------
+
+    /// <summary>The loops stop here: the cost grows with the iterations, a huge value would hang the GPU</summary>
+    public const float MaxIterations = 12f;
+
+    /// <summary>
+    /// Mandelbulb, the distance estimate of https://iquilezles.org/articles/mandelbulb/ (not exact):
+    /// the polar axis is Y, power 8 is the classic bulb of radius about 1.1.
+    /// </summary>
+    public static float Mandelbulb(Vector3 p, float power, float iterations)
+    {
+        Vector3 w = p;
+        float m = Vector3.Dot(w, w);
+        float dz = 1f;
+        int count = (int)MathF.Min(iterations, MaxIterations);
+
+        for (int i = 0; i < count; i++)
+        {
+            dz = power * MathF.Pow(m, 0.5f * (power - 1f)) * dz + 1f;
+
+            float r = MathF.Max(w.Length, 1e-8f);
+            float b = power * MathF.Acos(Clamp(w.Y / r, -1f, 1f));
+            float a = power * MathF.Atan2(w.X, w.Z);
+            w = p + MathF.Pow(r, power) * new Vector3(
+                MathF.Sin(b) * MathF.Sin(a),
+                MathF.Cos(b),
+                MathF.Sin(b) * MathF.Cos(a));
+
+            m = Vector3.Dot(w, w);
+            if (m > 256f)
+                break;
+        }
+
+        m = MathF.Max(m, 1e-12f);
+        return 0.25f * MathF.Log(m) * MathF.Sqrt(m) / dz;
+    }
+
+    /// <summary>
+    /// Menger sponge: a cube of half size h minus the crosses of bars on every level,
+    /// level n has holes h * 2 / 3^n wide (iterations = 0 is a plain cube).
+    /// </summary>
+    public static float MengerSponge(Vector3 p, float halfSize, float iterations)
+    {
+        p /= halfSize;
+
+        float d = Box(p, Vector3.One);
+        float s = 1f;
+        int count = (int)MathF.Min(iterations, MaxIterations);
+
+        for (int i = 0; i < count; i++)
+        {
+            var a = new Vector3(
+                Mod(p.X * s, 2f) - 1f,
+                Mod(p.Y * s, 2f) - 1f,
+                Mod(p.Z * s, 2f) - 1f);
+            s *= 3f;
+
+            Vector3 r = Abs(Vector3.One - 3f * Abs(a));
+            float da = MathF.Max(r.X, r.Y);
+            float db = MathF.Max(r.Y, r.Z);
+            float dc = MathF.Max(r.Z, r.X);
+
+            d = MathF.Max(d, (MathF.Min(da, MathF.Min(db, dc)) - 1f) / s);
+        }
+
+        return d * halfSize;
     }
 }

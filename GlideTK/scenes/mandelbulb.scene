@@ -1,0 +1,9 @@
+# The Mandelbulb 3D-fractal, run: GlideTK.exe scenes/mandelbulb.scene
+
+plane (0, 1, 0) 0
+
+translate (0, 10, 0) { 
+	scale 10 {
+		mandelbulb 8 6 
+	}
+}
