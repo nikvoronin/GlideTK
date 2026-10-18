@@ -134,6 +134,17 @@ Apply to the union of the block.
 
 The top level of a file is an implicit union.
 
+### Environment
+
+Directives of the top level of a file, not shapes (they are not allowed inside blocks). All are optional,
+without them the renderer defaults apply.
+
+| Syntax | Notes |
+| --- | --- |
+| `sun (x, y, z)` | direction to the sun, any length (a zero vector is ignored); default: the sun walks over the sky with `t`; may use `t`: `sun (cos(t), 1, sin(t))` |
+| `fog (r, g, b) density` | color of the fog, it is also the color of the sky, and its density: the fog is `1 - exp(-density * distance^2)`, 0 turns it off; default `(0.8, 0.9, 1) 0.002` |
+| `camera (x, y, z) (dx, dy, dz)` | position and direction of the player at the start; F5 does not move the player; default `(3, 1, 0) (-1, 0, 0)` |
+
 ### Expressions
 
 - numbers, `t` (physics time in seconds), `pi`
@@ -159,6 +170,7 @@ translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }
 
 ### 2026
 
+- Oct 18. Scene directives `sun`, `fog` and `camera`: light, fog and the start camera are set by the scene file.
 - Oct 18:
     - Primitives `mandelbulb` and `mengersponge` (iq distance estimate and the iterated cross of bars).
     - Gravity on/off.

@@ -52,6 +52,16 @@ public static class SceneDefs
         }
         .ToDictionary(d => d.Name);
 
+    /// <summary>Environment directives of the file top level, they are not shapes</summary>
+    public static readonly IReadOnlyDictionary<string, PrimDef> Directives =
+        new PrimDef[]
+        {
+            new("sun",              0,  [V]),       // (direction to the sun)
+            new("fog",              0,  [V, S]),    // (color, also the sky) density
+            new("camera",           0,  [V, V]),    // (position) (direction), at the start only
+        }
+        .ToDictionary(d => d.Name);
+
     public static readonly IReadOnlyDictionary<string, BlockDef> Blocks =
         new BlockDef[]
         {

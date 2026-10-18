@@ -24,6 +24,9 @@ public class SceneState
 
     public Vector4[] Data { get; private set; }
 
+    /// <summary>Light, fog and the start camera of the scene file</summary>
+    public SceneEnvironment Env { get; private set; } = SceneEnvironment.Evaluate([], 0f);
+
     /// <summary>Shapes of the scene leaves, 
     /// the fragment shader is generated from them</summary>
     public SceneShapes Shapes { get; private set; } = new();
@@ -57,6 +60,7 @@ public class SceneState
     public void Update(float t)
     {
         time = t;
+        Env = SceneEnvironment.Evaluate(nodes, t);
 
         int shapesVersion = Shapes.Version;
         Data = SceneCompiler.Compile(nodes, t, Shapes);
@@ -82,6 +86,7 @@ public class SceneState
             nodes = parsed;
             Data = data;
             Shapes = parsedShapes;
+            Env = SceneEnvironment.Evaluate(parsed, time);
             ShaderRevision++;
             Version++;
             LastError = null;

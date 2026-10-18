@@ -5,6 +5,9 @@ uniform vec3 iResolution;
 uniform vec3 ro;	// camera ray origin
 uniform mat3 camProj;	// camera projection matrix
 uniform int useBvh;	// 0: evaluate every leaf, to compare the speed
+uniform vec3 sun;	// direction to the sun, from the scene (SceneEnvironment)
+uniform vec3 fogColor;	// also the sky
+uniform float fogDensity;
 
 // Compiled scene program, uploaded by Render from SceneState (see Scene/SceneOpcodes.cs).
 // g_map[0] = (materialBase, bvhStart, bvhNodeCount, alwaysCount),
@@ -601,8 +604,7 @@ vec3 render(in vec3 ro, in vec3 rd)
 	vec3 ref = reflect(rd, nor);
 
 	// lighitng
-	vec3  lig = normalize(vec3(cos(iGlobalTime *0.1), abs(sin(iGlobalTime *0.1)), cos(iGlobalTime *0.1) * sin(iGlobalTime *0.1)));
-	//vec3  lig = normalize(vec3(-0.6, 0.7, -0.5));
+	vec3  lig = normalize(sun);
 	float amb = clamp(0.5 + 0.5 * nor.y, 0.0, 1.0);
 	float dif = clamp(dot(nor, lig), 0.0, 1.0);
 	float spe = pow(clamp(dot(ref, lig), 0.0, 1.0), 16.0);
@@ -615,7 +617,7 @@ vec3 render(in vec3 ro, in vec3 rd)
 	lin += 0.20 * amb;
 	col *= lin;
 
-	col = mix(col, vec3(0.8, 0.9, 1.0), 1.0 - exp(-0.002 * t * t));	// distance fog
+	col = mix(col, fogColor, 1.0 - exp(-fogDensity * t * t));	// distance fog
 	
 	return vec3(clamp(col, 0.0, 1.0));
 }

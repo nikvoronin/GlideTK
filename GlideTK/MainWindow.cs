@@ -40,12 +40,14 @@ public class MainWindow : GameWindow
         render = new Render();
         text = new TextRenderer();
 
+        scene = new SceneState(scenePath);
+
+        // the camera directive is applied at the start only, F5 does not teleport the player
         camera = new Camera(
-            new Vector3(3, 1, 0),
-            new Vector3(-1, 0, 0),
+            scene.Env.CameraPosition ?? new Vector3(3, 1, 0),
+            scene.Env.CameraDirection ?? new Vector3(-1, 0, 0),
             new Vector3(0, 1, 0));
 
-        scene = new SceneState(scenePath);
         physics = new Physics(scene);
         motionCtrl = new FpsController();
 

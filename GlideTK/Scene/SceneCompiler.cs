@@ -57,7 +57,10 @@ public class SceneCompiler
     {
         var compiler = new SceneCompiler(t, shapes);
         foreach (SceneNode node in nodes)
-            compiler.Flatten(node);
+        {
+            if (node is not EnvNode)
+                compiler.Flatten(node);
+        }
 
         return compiler.Assemble();
     }

@@ -16,6 +16,9 @@ public class Render
         uf_CamRo,
         um3_CamProj,
         uf_UseBvh,
+        uf_Sun,
+        uf_FogColor,
+        uf_FogDensity,
         ubo_GlobalMap;
 
     /// <summary>
@@ -81,6 +84,9 @@ public class Render
         uf_CamRo = GetUniformLocation(Const.UF_RAY_ORIGIN);
         um3_CamProj = GetUniformLocation(Const.UF_PROJECTION_MATRIX);
         uf_UseBvh = GetUniformLocation(Const.UF_USE_BVH);
+        uf_Sun = GetUniformLocation(Const.UF_SUN);
+        uf_FogColor = GetUniformLocation(Const.UF_FOG_COLOR);
+        uf_FogDensity = GetUniformLocation(Const.UF_FOG_DENSITY);
     }
 
     public void Start(SceneState scene)
@@ -188,6 +194,9 @@ public class Render
         GL.Uniform3(uf_CamRo, camera.Origin);
         GL.UniformMatrix3(um3_CamProj, false, ref camera.Projection);
         GL.Uniform1(uf_UseBvh, Bvh ? 1 : 0);
+        GL.Uniform3(uf_Sun, scene.Env.Sun);
+        GL.Uniform3(uf_FogColor, scene.Env.FogColor);
+        GL.Uniform1(uf_FogDensity, scene.Env.FogDensity);
 
         UploadScene(scene);
 

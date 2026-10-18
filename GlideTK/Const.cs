@@ -22,6 +22,9 @@ public static class Const
     public const string UF_RAY_ORIGIN = "ro";
     public const string UF_PROJECTION_MATRIX = "camProj";
     public const string UF_USE_BVH = "useBvh";
+    public const string UF_SUN = "sun";
+    public const string UF_FOG_COLOR = "fogColor";
+    public const string UF_FOG_DENSITY = "fogDensity";
     public const string UF_TEXT_SCREEN_SIZE = "screenSize";
     public const string UF_TEXT_ATLAS = "atlas";
 
