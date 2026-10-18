@@ -112,6 +112,9 @@ public class MainWindow : GameWindow
         if (keyboard.IsKeyPressed(Const.INPUT_KEY_TOGGLE_BVH))
             render.Bvh = !render.Bvh;
 
+        if (keyboard.IsKeyPressed(Const.INPUT_KEY_TOGGLE_GRAVITY))
+            physics.Gravity = !physics.Gravity;
+
         if (keyboard.IsKeyPressed(Const.INPUT_KEY_FULLSCREEN))
         {
             WindowState = WindowState == WindowState.Fullscreen
@@ -133,6 +136,7 @@ public class MainWindow : GameWindow
         "Mouse  look\n" +
         "Space  up\n" +
         "Shift  down\n" +
+        "G      gravity on/off\n" +
         "F1     this help\n" +
         "F5     reload the scene\n" +
         "F7     BVH on/off\n" +
