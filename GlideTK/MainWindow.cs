@@ -40,12 +40,14 @@ public class MainWindow : GameWindow
         render = new Render();
         text = new TextRenderer();
 
+        scene = new SceneState(scenePath);
+
+        // the camera directive is applied at the start only, F5 does not teleport the player
         camera = new Camera(
-            new Vector3(3, 1, 0),
-            new Vector3(-1, 0, 0),
+            scene.Env.CameraPosition ?? new Vector3(3, 1, 0),
+            scene.Env.CameraDirection ?? new Vector3(-1, 0, 0),
             new Vector3(0, 1, 0));
 
-        scene = new SceneState(scenePath);
         physics = new Physics(scene);
         motionCtrl = new FpsController();
 
@@ -63,6 +65,10 @@ public class MainWindow : GameWindow
         // physics and the next rendered frames use the same data
         scene.Update(physics.GlobalTime);
 
+        SceneEnvironment env = scene.Env;
+        motionCtrl.WalkSpeed = env.Player.Y;
+        motionCtrl.ClimbMultiplier = env.Player.Z;
+
         // update player input (keyboard_wasd+space+shift + mouse-look)
         Ray motionStep = motionCtrl.Update(
             delta, 
@@ -75,7 +81,7 @@ public class MainWindow : GameWindow
             camera.Origin,
             motionStep.Origin,
             delta,
-            Const.PLAYER_HIT_RADIUS,
+            env.Player.X,
             flying: motionStep.Origin.Y > 0);
 
         motionStep.Origin = center - camera.Origin;

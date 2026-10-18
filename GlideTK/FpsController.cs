@@ -21,8 +21,8 @@ public class FpsController
         set => mouse_sensitivity = value / 100f;
     }
 
-    readonly float motion_Speed = 5f;
-    readonly float motion_jumpImpulse = 3f;
+    public float WalkSpeed { get; set; } = 5f;
+    public float ClimbMultiplier { get; set; } = 3f;
 
     float yaw = 0.0f;
     float pitch = 0.0f;
@@ -48,7 +48,7 @@ public class FpsController
     {
         nextStep.Origin = Vector3.Zero;
 
-        float deltaStep = motion_Speed * delta;
+        float deltaStep = WalkSpeed * delta;
 
         if (keyboard.IsKeyDown(Keys.W))
             nextStep.Origin += nextStep.Target * deltaStep;
@@ -68,7 +68,7 @@ public class FpsController
             nextStep.Origin -= nextStep.Up * deltaStep;
 
         if (keyboard.IsKeyDown(Keys.Space))
-            nextStep.Origin += nextStep.Up * deltaStep * motion_jumpImpulse;
+            nextStep.Origin += nextStep.Up * deltaStep * ClimbMultiplier;
     }
 
     protected void UpdateMouse(

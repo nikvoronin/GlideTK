@@ -5,6 +5,13 @@ uniform vec3 iResolution;
 uniform vec3 ro;	// camera ray origin
 uniform mat3 camProj;	// camera projection matrix
 uniform int useBvh;	// 0: evaluate every leaf, to compare the speed
+uniform vec3 sun;	// direction to the sun, from the scene (SceneEnvironment)
+uniform vec3 fogColor;	// also the sky
+uniform float fogDensity;
+uniform vec3 sky;	// color of the rays that hit nothing
+uniform vec4 light;	// ambient, specular, shininess, gamma
+uniform vec2 shadows;	// sharpness, max distance (0: no shadows)
+uniform vec3 march;	// max distance, max steps, max shadow steps
 
 // Compiled scene program, uploaded by Render from SceneState (see Scene/SceneOpcodes.cs).
 // g_map[0] = (materialBase, bvhStart, bvhNodeCount, alwaysCount),
@@ -515,10 +522,9 @@ vec3 materialColor(float id)
 
 vec2 castRay(in vec3 ro, in vec3 rd)
 {
-	//TODO move to external constants w/ uniq names
-	const float MAX_DIST = 100;
+	float MAX_DIST = march.x;
 	const float MIN_DIST = 0.0002;
-	const int MAX_RAY_STEPS = 100;
+	int MAX_RAY_STEPS = int(march.y);
 
 	float t = 0.0;
 	vec2 h = vec2(1.0);
@@ -562,10 +568,10 @@ float softshadow(in vec3 ro, in vec3 rd)
 {
 	const float INIT_T = 0.02;
 	const float INIT_RES = 0.5;			// max step: 0.1 doubles the frame time with no visible gain
-	const float MAX_DIST = 25;
+	float MAX_DIST = shadows.y;
 	const float MIN_DIST = 0.001;
-	const int MAX_RAY_STEPS = 256;		// higher -> longer shadow distance
-	const float SHADOW_SMOOTH = 8.0;	// lower ~ smother, higher -> sharper
+	int MAX_RAY_STEPS = int(march.z);	// higher -> longer shadow distance
+	float SHADOW_SMOOTH = shadows.x;	// lower ~ smother, higher -> sharper
 
 	float res = 1.0;
 	float t = INIT_T;
@@ -601,21 +607,24 @@ vec3 render(in vec3 ro, in vec3 rd)
 	vec3 ref = reflect(rd, nor);
 
 	// lighitng
-	vec3  lig = normalize(vec3(cos(iGlobalTime *0.1), abs(sin(iGlobalTime *0.1)), cos(iGlobalTime *0.1) * sin(iGlobalTime *0.1)));
-	//vec3  lig = normalize(vec3(-0.6, 0.7, -0.5));
+	vec3  lig = normalize(sun);
 	float amb = clamp(0.5 + 0.5 * nor.y, 0.0, 1.0);
 	float dif = clamp(dot(nor, lig), 0.0, 1.0);
-	float spe = pow(clamp(dot(ref, lig), 0.0, 1.0), 16.0);
+	float spe = pow(clamp(dot(ref, lig), 0.0, 1.0), light.z);
 
-	dif *= softshadow(pos, lig);
+	if (shadows.y > 0.0)
+		dif *= softshadow(pos, lig);
 
 	vec3 lin = vec3(0.0);
 	lin += dif;
-	lin += 1.20 * spe *dif;
-	lin += 0.20 * amb;
+	lin += light.y * spe * dif;
+	lin += light.x * amb;
 	col *= lin;
 
-	col = mix(col, vec3(0.8, 0.9, 1.0), 1.0 - exp(-0.002 * t * t));	// distance fog
+	col = mix(col, fogColor, 1.0 - exp(-fogDensity * t * t));	// distance fog
+
+	if (t > march.x)
+		col = sky;
 	
 	return vec3(clamp(col, 0.0, 1.0));
 }
@@ -630,6 +639,6 @@ void main(void)
 
 	vec3 col = render(ro, rd);
 
-	col = pow(col, vec3(0.8545)); // tint
+	col = pow(col, vec3(light.w)); // gamma
 	fragColor = vec4(col, 1.0);
 }

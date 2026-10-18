@@ -9,7 +9,8 @@ namespace GlideTK.Scene;
 /// <summary>
 /// Recursive descent parser of the scene language:
 ///
-///   scene  := node*
+///   scene  := (directive | node)*
+///   directive := a name of SceneDefs.Directives and its args: 'sun' vec, 'fog' vec arg, 'camera' vec vec, ...
 ///   node   := prim args ['color' vec] | block args '{' node+ '}'
 ///   args   := (arg | vec)*                as declared in <see cref="SceneDefs"/>
 ///   vec    := '(' expr ',' expr ',' expr ')'
@@ -48,7 +49,7 @@ public class SceneParser
         var nodes = new List<SceneNode>();
         while (parser.Peek.Kind != TokenKind.End)
         {
-            nodes.Add(parser.ParseNode());
+            nodes.Add(parser.ParseTopLevelNode());
         }
 
         return nodes;
@@ -70,6 +71,26 @@ public class SceneParser
     }
 
     // Nodes ----------------------------------------------------------------------
+
+    /// <summary>A shape or an environment directive, directives are not allowed in blocks</summary>
+    SceneNode ParseTopLevelNode()
+    {
+        if (Peek.Kind != TokenKind.Ident
+            || !SceneDefs.Directives.TryGetValue(Peek.Text, out PrimDef def))
+        {
+            return ParseNode();
+        }
+
+        var node = new EnvNode
+        {
+            Def = def,
+            Line = Next().Line
+        };
+
+        ParseArgs(def.Args, node.Scalars, node.Vectors);
+
+        return node;
+    }
 
     SceneNode ParseNode()
     {

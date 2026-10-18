@@ -8,9 +8,9 @@ You describe a 3D scene in a small text language (.scene files): primitives, dom
 
 It supports BVH culling on the GPU and CPU, soft shadows, a bitmap-font HUD, and F5 live scene reload. It ships with showcase scenes: a Doric temple, an Escher-style stair hall, and a walkable Menger sponge.
 
-- WASD + mouse-look — Walk or strafe
-- SPACE — Up
-- LEFT SHIFT — Down
+- WASD + mouse-look - Walk or strafe
+- SPACE - Up
+- LSHIFT - Down
 - G - Gravity on/off (off: the player hangs in the air, SPACE and SHIFT move it up and down)
 - ESC - Exit
 - F11 - Fullscreen/Normal
@@ -134,6 +134,24 @@ Apply to the union of the block.
 
 The top level of a file is an implicit union.
 
+### Environment
+
+Directives of the top level of a file, not shapes (they are not allowed inside blocks). All are optional,
+without them the defaults apply. The values are shader uniforms: changing them does not rebuild the shader.
+
+| Syntax | Notes |
+| --- | --- |
+| `sun (x, y, z)` | direction to the sun, any length (a zero vector is ignored); default: the sun walks over the sky with `t`; may use `t`: `sun (cos(t), 1, sin(t))` |
+| `fog (r, g, b) density` | color of the fog, it is also the color of the sky, and its density: the fog is `1 - exp(-density * distance^2)`, 0 turns it off; default `(0.8, 0.9, 1) 0.002` |
+| `camera (x, y, z) (dx, dy, dz)` | position and direction of the player at the start; F5 does not move the player; default `(3, 1, 0) (-1, 0, 0)` |
+| `sky (r, g, b)` | color of the rays that hit nothing; default: the fog color |
+| `light ambient specular shininess` | default `0.2 1.2 16` |
+| `gamma g` | gamma of the final color, default `0.8545` |
+| `shadows sharpness distance` | soft shadows, default `8 25`; distance 0 turns the shadows off (the cheapest speed-up of a heavy scene) |
+| `march maxDistance maxSteps maxShadowSteps` | ray marching, default `100 100 256`; a big scene needs a larger distance; the steps are capped at 2000 |
+| `gravity accel` | free fall acceleration, default `9.8`; `0` starts without gravity (the `G` key switches it at run time); F5 applies a new value |
+| `player radius speed climb` | sphere radius of the player, walking speed and the multiplier of the speed up with `SPACE`, default `1 5 3`; F5 applies new values |
+
 ### Expressions
 
 - numbers, `t` (physics time in seconds), `pi`
@@ -160,6 +178,7 @@ translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }
 ### 2026
 
 - Oct 18:
+    - Scene directives `sun`, `fog`, `camera`, `sky`, `light`, `gamma`, `shadows`, `march`, `gravity` and `player`: light, fog, shadows, ray marching, the start camera and the player are set by the scene file.
     - Primitives `mandelbulb` and `mengersponge` (iq distance estimate and the iterated cross of bars).
     - Gravity on/off.
 - Oct 14. Scene leaves are compiled to GLSL instead of being interpreted in the shader: v1.0 speed on simple scenes, 2-14 times faster on the rest.

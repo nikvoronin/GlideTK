@@ -52,6 +52,23 @@ public static class SceneDefs
         }
         .ToDictionary(d => d.Name);
 
+    /// <summary>Environment directives of the file top level, they are not shapes</summary>
+    public static readonly IReadOnlyDictionary<string, PrimDef> Directives =
+        new PrimDef[]
+        {
+            new("sun",              0,  [V]),       // (direction to the sun)
+            new("fog",              0,  [V, S]),    // (color, also the sky) density
+            new("camera",           0,  [V, V]),    // (position) (direction), at the start only
+            new("sky",              0,  [V]),       // (color) of the rays that hit nothing
+            new("light",            0,  [S, S, S]), // ambient specular shininess
+            new("gamma",            0,  [S]),       // of the final color
+            new("shadows",          0,  [S, S]),    // sharpness distance, distance 0 is off
+            new("march",            0,  [S, S, S]), // maxDistance maxSteps maxShadowSteps
+            new("gravity",          0,  [S]),       // acceleration, 0 starts without gravity
+            new("player",           0,  [S, S, S]), // radius walkingSpeed climbMultiplier
+        }
+        .ToDictionary(d => d.Name);
+
     public static readonly IReadOnlyDictionary<string, BlockDef> Blocks =
         new BlockDef[]
         {
