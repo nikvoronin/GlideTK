@@ -1,0 +1,6 @@
+# Menger sponge you can walk in, run: GlideTK.exe scenes/menger-inf.scene
+
+repeat (50, 55, 45) 
+{
+	mengersponge 40 32
+}
