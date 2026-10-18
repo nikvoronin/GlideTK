@@ -65,6 +65,10 @@ public class MainWindow : GameWindow
         // physics and the next rendered frames use the same data
         scene.Update(physics.GlobalTime);
 
+        SceneEnvironment env = scene.Env;
+        motionCtrl.WalkSpeed = env.Player.Y;
+        motionCtrl.ClimbMultiplier = env.Player.Z;
+
         // update player input (keyboard_wasd+space+shift + mouse-look)
         Ray motionStep = motionCtrl.Update(
             delta, 
@@ -77,7 +81,7 @@ public class MainWindow : GameWindow
             camera.Origin,
             motionStep.Origin,
             delta,
-            Const.PLAYER_HIT_RADIUS,
+            env.Player.X,
             flying: motionStep.Origin.Y > 0);
 
         motionStep.Origin = center - camera.Origin;

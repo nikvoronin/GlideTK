@@ -25,6 +25,10 @@ public static class Const
     public const string UF_SUN = "sun";
     public const string UF_FOG_COLOR = "fogColor";
     public const string UF_FOG_DENSITY = "fogDensity";
+    public const string UF_SKY = "sky";
+    public const string UF_LIGHT = "light";
+    public const string UF_SHADOWS = "shadows";
+    public const string UF_MARCH = "march";
     public const string UF_TEXT_SCREEN_SIZE = "screenSize";
     public const string UF_TEXT_ATLAS = "atlas";
 

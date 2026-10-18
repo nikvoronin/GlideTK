@@ -10,7 +10,7 @@ namespace GlideTK.Scene;
 /// Recursive descent parser of the scene language:
 ///
 ///   scene  := (directive | node)*
-///   directive := 'sun' vec | 'fog' vec arg | 'camera' vec vec
+///   directive := a name of SceneDefs.Directives and its args: 'sun' vec, 'fog' vec arg, 'camera' vec vec, ...
 ///   node   := prim args ['color' vec] | block args '{' node+ '}'
 ///   args   := (arg | vec)*                as declared in <see cref="SceneDefs"/>
 ///   vec    := '(' expr ',' expr ',' expr ')'

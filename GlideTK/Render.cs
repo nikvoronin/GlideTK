@@ -19,6 +19,10 @@ public class Render
         uf_Sun,
         uf_FogColor,
         uf_FogDensity,
+        uf_Sky,
+        uf_Light,
+        uf_Shadows,
+        uf_March,
         ubo_GlobalMap;
 
     /// <summary>
@@ -87,6 +91,10 @@ public class Render
         uf_Sun = GetUniformLocation(Const.UF_SUN);
         uf_FogColor = GetUniformLocation(Const.UF_FOG_COLOR);
         uf_FogDensity = GetUniformLocation(Const.UF_FOG_DENSITY);
+        uf_Sky = GetUniformLocation(Const.UF_SKY);
+        uf_Light = GetUniformLocation(Const.UF_LIGHT);
+        uf_Shadows = GetUniformLocation(Const.UF_SHADOWS);
+        uf_March = GetUniformLocation(Const.UF_MARCH);
     }
 
     public void Start(SceneState scene)
@@ -197,6 +205,10 @@ public class Render
         GL.Uniform3(uf_Sun, scene.Env.Sun);
         GL.Uniform3(uf_FogColor, scene.Env.FogColor);
         GL.Uniform1(uf_FogDensity, scene.Env.FogDensity);
+        GL.Uniform3(uf_Sky, scene.Env.Sky);
+        GL.Uniform4(uf_Light, scene.Env.Light);
+        GL.Uniform2(uf_Shadows, scene.Env.Shadows);
+        GL.Uniform3(uf_March, scene.Env.March);
 
         UploadScene(scene);
 

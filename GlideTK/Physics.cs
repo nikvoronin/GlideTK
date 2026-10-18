@@ -12,7 +12,6 @@ public class Physics(SceneState scene)
 {
     public float GlobalTime = 0;
 
-    const float FREE_FALL_ACCEL = 9.8f;
     const float MAX_FALL_SPEED = 50f;       // keeps a fall step well below the sphere radius
     const float MAX_SUBSTEP = 0.5f;         // of the radius: a sphere cannot pass through a wall in one substep
     const int MAX_PUSH_ITERATIONS = 8;
@@ -24,7 +23,7 @@ public class Physics(SceneState scene)
     /// <summary>
     /// Off: no fall, the player hangs where it is, Space and Shift move it up and down
     /// </summary>
-    public bool Gravity { get; set; } = true;
+    public bool Gravity { get; set; } = scene.Env.Gravity > 0f;
 
     /// <summary>True when the last step ended standing on a surface</summary>
     public bool Grounded { get; private set; }
@@ -85,7 +84,7 @@ public class Physics(SceneState scene)
     {
         fallSpeed = flying || !Gravity
             ? 0f
-            : MathF.Min(fallSpeed + FREE_FALL_ACCEL * delta, MAX_FALL_SPEED);
+            : MathF.Min(fallSpeed + scene.Env.Gravity * delta, MAX_FALL_SPEED);
 
         motion.Y -= fallSpeed * delta;
 
