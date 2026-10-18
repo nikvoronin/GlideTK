@@ -48,6 +48,8 @@ static class GlslOps
         [SceneOpcodes.VCAPSULE] = "sdVerticalCapsule($p, $S.x, $S.y)",
         [SceneOpcodes.TRIANGLE] = "udTriangle($p, $V0, $V1, $V2)",
         [SceneOpcodes.QUAD] = "udQuad($p, $V0, $V1, $V2, $V3)",
+        [SceneOpcodes.MANDELBULB] = "sdMandelbulb($p, $S.x, $S.y)",
+        [SceneOpcodes.MENGERSPONGE] = "sdMengerSponge($p, $S.x, $S.y)",
     };
 
     const string KEEP_SCALE = "$s";

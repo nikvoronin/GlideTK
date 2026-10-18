@@ -47,6 +47,8 @@ public static class SceneDefs
             new("vcapsule",         SceneOpcodes.VCAPSULE,          [S, S]),        // height r
             new("triangle",         SceneOpcodes.TRIANGLE,          [V, V, V]),     // (a) (b) (c)
             new("quad",             SceneOpcodes.QUAD,              [V, V, V, V]),  // (a) (b) (c) (d)
+            new("mandelbulb",       SceneOpcodes.MANDELBULB,        [S, S]),        // power iterations
+            new("mengersponge",     SceneOpcodes.MENGERSPONGE,      [S, S]),        // halfSize iterations
         }
         .ToDictionary(d => d.Name);
 

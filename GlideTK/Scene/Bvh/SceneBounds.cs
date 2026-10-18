@@ -74,6 +74,12 @@ public static class SceneBounds
             case SceneOpcodes.OCTAHEDRON:
                 return Aabb.Centered(S(0));
 
+            case SceneOpcodes.MANDELBULB:       // the set lies inside |z| <= 2^(1 / (power - 1))
+                return Aabb.Centered(1.02f * MathF.Pow(2f, 1f / (MathF.Max(S(0), 2f) - 1f)));
+
+            case SceneOpcodes.MENGERSPONGE:
+                return Aabb.Centered(MathF.Abs(S(0)));
+
             case SceneOpcodes.CUTHOLLOWSPHERE:
                 return Aabb.Centered(S(0) + S(2));
 

@@ -168,18 +168,16 @@ public static class SceneVM
             SceneOpcodes.VCAPSULE => Sdf.VerticalCapsule(p, S.X, S.Y),
             SceneOpcodes.TRIANGLE => Sdf.Triangle(p, V(0), V(1), V(2)),
             SceneOpcodes.QUAD => Sdf.Quad(p, V(0), V(1), V(2), V(3)),
+            SceneOpcodes.MANDELBULB => Sdf.Mandelbulb(p, S.X, S.Y),
+            SceneOpcodes.MENGERSPONGE => Sdf.MengerSponge(p, S.X, S.Y),
 
             _ => throw new InvalidOperationException($"Bad scene opcode {op} at {pc}"),
         };
     }
 
-    /// <summary>GLSL mod(): x - y * floor(x / y)</summary>
-    static float Mod(float x, float y) => 
-        x - y * MathF.Floor(x / y);
-
     /// <summary>mod(p, c) - c/2, zero period is not repeated</summary>
     static float Rep(float p, float c) => 
-        c != 0f ? Mod(p, c) - 0.5f * c : p;
+        c != 0f ? Sdf.Mod(p, c) - 0.5f * c : p;
 
     /// <summary>p - c * clamp(round(p / c), -l, l), zero period is not repeated</summary>
     static float RepLimited(float p, float c, float l) =>

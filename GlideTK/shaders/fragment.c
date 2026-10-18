@@ -344,6 +344,61 @@ float udQuad(vec3 p, vec3 a, vec3 b, vec3 c, vec3 d)
 		dot(nor, pa) * dot(nor, pa) / dot2(nor));
 }
 
+// Fractals, mirror of Sdf.Mandelbulb and Sdf.MengerSponge in Scene/Sdf.cs
+
+#define MAX_FRACTAL_ITERATIONS 12.0
+
+// distance estimate of https://iquilezles.org/articles/mandelbulb/ (not exact), the polar axis is Y
+float sdMandelbulb(vec3 p, float power, float iterations)
+{
+	vec3 w = p;
+	float m = dot(w, w);
+	float dz = 1.0;
+	int count = int(min(iterations, MAX_FRACTAL_ITERATIONS));
+
+	for (int i = 0; i < count; i++)
+	{
+		dz = power * pow(m, 0.5 * (power - 1.0)) * dz + 1.0;
+
+		float r = max(length(w), 1e-8);
+		float b = power * acos(clamp(w.y / r, -1.0, 1.0));
+		float a = power * atan(w.x, w.z);
+		w = p + pow(r, power) * vec3(sin(b) * sin(a), cos(b), sin(b) * cos(a));
+
+		m = dot(w, w);
+		if (m > 256.0)
+			break;
+	}
+
+	m = max(m, 1e-12);
+	return 0.25 * log(m) * sqrt(m) / dz;
+}
+
+// a cube of half size h minus the crosses of bars on every level
+float sdMengerSponge(vec3 p, float halfSize, float iterations)
+{
+	p /= halfSize;
+
+	float d = sdBox(p, vec3(1.0));
+	float s = 1.0;
+	int count = int(min(iterations, MAX_FRACTAL_ITERATIONS));
+
+	for (int i = 0; i < count; i++)
+	{
+		vec3 a = mod(p * s, 2.0) - 1.0;
+		s *= 3.0;
+
+		vec3 r = abs(1.0 - 3.0 * abs(a));
+		float da = max(r.x, r.y);
+		float db = max(r.y, r.z);
+		float dc = max(r.z, r.x);
+
+		d = max(d, (min(da, min(db, dc)) - 1.0) / s);
+	}
+
+	return d * halfSize;
+}
+
 //----------------------------------------------------------------------
 // mod(p, c) - c/2 per axis, an axis with zero period is left as is
 vec3 opRep(vec3 p, vec3 c)

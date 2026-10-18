@@ -62,6 +62,8 @@ public static class SceneOpcodes
     public const int VCAPSULE = 30;         // h, r
     public const int TRIANGLE = 31;         //                      a, b, c
     public const int QUAD = 32;             //                      a, b, c, d
+    public const int MANDELBULB = 33;       // power, iterations
+    public const int MENGERSPONGE = 34;     // halfSize, iterations
 
     // domain
     public const int DOMAIN_FIRST = 50;
