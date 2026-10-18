@@ -21,6 +21,11 @@ public class Physics(SceneState scene)
     readonly SceneState scene = scene;
     float fallSpeed;
 
+    /// <summary>
+    /// Off: no fall, the player hangs where it is, Space and Shift move it up and down
+    /// </summary>
+    public bool Gravity { get; set; } = true;
+
     /// <summary>True when the last step ended standing on a surface</summary>
     public bool Grounded { get; private set; }
 
@@ -78,7 +83,7 @@ public class Physics(SceneState scene)
         float radius,
         bool flying)
     {
-        fallSpeed = flying
+        fallSpeed = flying || !Gravity
             ? 0f
             : MathF.Min(fallSpeed + FREE_FALL_ACCEL * delta, MAX_FALL_SPEED);
 

@@ -12,7 +12,9 @@ You describe a 3D scene in a small text language (.scene files): primitives, dom
 It supports BVH culling on the GPU and CPU, soft shadows, a bitmap-font HUD, and F5 live scene reload. It ships with showcase scenes: a Doric temple, an Escher-style stair hall, and a walkable Menger sponge.
 
 - WASD + mouse-look
-- SPACE - Up
+- SPACE - Up,
+- LEFT SHIFT - Down
+- G - Gravity on/off (off: the player hangs in the air, SPACE and SHIFT move it up and down)
 - ESC - Exit
 - F11 - Fullscreen/Normal
 - F1 - Key help on the screen (frame time, position and scene errors are always shown)

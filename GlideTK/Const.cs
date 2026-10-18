@@ -36,6 +36,7 @@ public static class Const
     public const Keys INPUT_KEY_HELP = Keys.F1;
     public const Keys INPUT_KEY_RELOAD_SCENE = Keys.F5;
     public const Keys INPUT_KEY_TOGGLE_BVH = Keys.F7;
+    public const Keys INPUT_KEY_TOGGLE_GRAVITY = Keys.G;
 
     public const int DISPLAY_XGA_W = 1024;
     public const int DISPLAY_XGA_H = 768;
