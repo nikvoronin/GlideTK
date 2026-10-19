@@ -33,6 +33,9 @@ public sealed record SceneEnvironment
     /// <summary>(max distance, max steps, max shadow steps)</summary>
     public Vector3 March { get; init; } = new(100f, 100f, 256f);
 
+    /// <summary>How many reflections deep a ray goes, 0 turns the reflections off</summary>
+    public int Bounces { get; init; } = 1;
+
     /// <summary>Free fall acceleration, 0 starts without gravity</summary>
     public float Gravity { get; init; } = 9.8f;
 
@@ -46,6 +49,9 @@ public sealed record SceneEnvironment
 
     /// <summary>The loops of the shader and the physics stay finite whatever the scene file says</summary>
     const float MAX_LOOP = 2000f;
+
+    /// <summary>The loop of render() in the shader has this length</summary>
+    const float MAX_BOUNCES = 3f;
 
     /// <summary>The sun walks over the sky with the time</summary>
     static Vector3 DefaultSun(float t) => new(
@@ -69,12 +75,37 @@ public sealed record SceneEnvironment
             env = directive.Def.Name switch
             {
                 // a zero vector has no direction: keep the default sun
-                "sun" => Vec(0) is { LengthSquared: > 1e-12f } sun ? env with { Sun = sun } : env,
-                "fog" => env with { FogColor = Vec(0), FogDensity = MathF.Max(Num(0), 0f) },
-                "sky" => env with { SkyColor = Vec(0) },
-                "light" => env with { Light = new Vector4(Num(0), Num(1), MathF.Max(Num(2), 0f), env.Light.W) },
-                "gamma" => env with { Light = new Vector4(env.Light.Xyz, MathF.Max(Num(0), 0.01f)) },
-                "shadows" => env with { Shadows = new Vector2(Num(0), MathF.Max(Num(1), 0f)) },
+                "sun" => Vec(0) is { LengthSquared: > 1e-12f } sun
+                    ? env with { Sun = sun } 
+                    : env,
+
+                "fog" => env with 
+                { 
+                    FogColor = Vec(0), 
+                    FogDensity = MathF.Max(Num(0), 0f) 
+                },
+
+                "sky" => env with 
+                { 
+                    SkyColor = Vec(0) 
+                },
+
+                "light" => env with 
+                { 
+                    Light = new Vector4(Num(0), Num(1), MathF.Max(Num(2), 0f), 
+                    env.Light.W) 
+                },
+
+                "gamma" => env with 
+                { 
+                    Light = new Vector4(env.Light.Xyz, MathF.Max(Num(0), 0.01f)) 
+                },
+
+                "shadows" => env with 
+                { 
+                    Shadows = new Vector2(Num(0), MathF.Max(Num(1), 0f)) 
+                },
+                
                 "march" => env with
                 {
                     March = new Vector3(
@@ -82,12 +113,33 @@ public sealed record SceneEnvironment
                         Math.Clamp(MathF.Floor(Num(1)), 1f, MAX_LOOP),
                         Math.Clamp(MathF.Floor(Num(2)), 0f, MAX_LOOP)),
                 },
-                "gravity" => env with { Gravity = MathF.Max(Num(0), 0f) },
+
+                "bounces" => env with 
+                { 
+                    Bounces = Num(0) > 0f 
+                        ? (int)MathF.Min(MathF.Floor(Num(0)), MAX_BOUNCES) 
+                        : 0 
+                },
+                
+                "gravity" => env with 
+                { 
+                    Gravity = MathF.Max(Num(0), 0f) 
+                },
+
                 "player" => env with
                 {
-                    Player = new Vector3(MathF.Max(Num(0), 0.05f), MathF.Max(Num(1), 0f), MathF.Max(Num(2), 0f)),
+                    Player = new Vector3(
+                        MathF.Max(Num(0), 0.05f), 
+                        MathF.Max(Num(1), 0f), 
+                        MathF.Max(Num(2), 0f)),
                 },
-                "camera" => env with { CameraPosition = Vec(0), CameraDirection = Vec(1) },
+
+                "camera" => env with 
+                { 
+                    CameraPosition = Vec(0), 
+                    CameraDirection = Vec(1) 
+                },
+
                 _ => env,
             };
         }

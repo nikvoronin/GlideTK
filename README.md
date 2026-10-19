@@ -51,7 +51,11 @@ Distance functions and operations follow [iquilezles.org/articles/distfunctions]
 
 ### Primitives
 
-Centered at the origin. Optional `color (r, g, b)` may follow the arguments. Angles are in degrees.
+Centered at the origin.
+
+Optional `color (r, g, b)` and `reflect k` may follow the arguments, in this order, each can be used alone: `sphere 1 color (0.9, 0.9, 0.95) reflect 0.6`.
+
+`reflect` is the share of the reflected ray in the color, 0 (default) to 1, other values are clamped; how deep the reflections go is set by `bounces`. Angles are in degrees.
 
 | Syntax | Notes |
 | --- | --- |
@@ -151,6 +155,7 @@ without them the defaults apply. The values are shader uniforms: changing them d
 | `march maxDistance maxSteps maxShadowSteps` | ray marching, default `100 100 256`; a big scene needs a larger distance; the steps are capped at 2000 |
 | `gravity accel` | free fall acceleration, default `9.8`; `0` starts without gravity (the `G` key switches it at run time); F5 applies a new value |
 | `player radius speed climb` | sphere radius of the player, walking speed and the multiplier of the speed up with `SPACE`, default `1 5 3`; F5 applies new values |
+| `bounces n` | how many reflections deep a ray goes, default `1`, at most `3`, `0` turns the reflections off; a reflective pixel costs about one more ray per bounce, the shadow of a reflected ray is shorter |
 
 ### Expressions
 
@@ -177,6 +182,7 @@ translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }
 
 ### 2026
 
+- Oct 19. Reflections: `reflect k` of a material and the `bounces n` directive (up to 3), a scene without `reflect` renders as before.
 - Oct 18:
     - Scene directives `sun`, `fog`, `camera`, `sky`, `light`, `gamma`, `shadows`, `march`, `gravity` and `player`: light, fog, shadows, ray marching, the start camera and the player are set by the scene file.
     - Primitives `mandelbulb` and `mengersponge` (iq distance estimate and the iterated cross of bars).

@@ -1,10 +1,24 @@
 # Every primitive and operation of the scene language, run: GlideTK.exe scenes/showcase.scene
 # Formulas: https://iquilezles.org/articles/distfunctions/
 
-plane (0, 1, 0) 0
+bounces 3
+camera (56.2, 1.0, -15.3) (-1, 0, 0)
+sun (sin(t * 0.1) * 60, 19, cos(t * 0.1) * 60)
+
+plane (0, -1, 0) -10 reflect 1
+
+smooth 1 {
+	plane (0, 1, 0) 0
+
+	translate(0, 2, -8) {
+		repeat (32, 0, 0) {
+			sphere 3  reflect 0.6
+		}
+	}
+}
 
 # primitives, a row along X at z = -8
-translate (0, 1.5, -8) {
+translate (0, 1.5, 0) {
     translate (-60, 0, 0) { sphere 1 color (1, 0.5, 0.4) }
     translate (-56, 0, 0) { box (1, 1, 1) }
     translate (-52, 0, 0) { roundbox (0.8, 0.8, 0.8) 0.2 }
@@ -34,13 +48,21 @@ translate (0, 1.5, -8) {
     translate (44, -1, 0) { vcapsule 2 0.5 }
     translate (48, 0, 0) { triangle (-1, -1, 0) (1, -1, 0) (0, 1, 0) }
     translate (52, 0, 0) { quad (-1, -1, 0) (1, -1, 0) (1, 1, 0) (-1, 1, 0) }
-    translate (56, 0, 0) { mandelbulb 8 6 color (0.9, 0.75, 0.5) }
-    translate (60, 0, 0) { mengersponge 1.2 3 color (0.7, 0.8, 0.95) }
+    translate (56, 0, 0) { 
+		rotate (0, t * 2, 0) { 
+			mandelbulb 8 6 color (0.9, 0.75, 0.5) 
+		}
+	}
+    translate (60, 0, 0) { 
+		rotate (0, t * 10, 0) { 
+			mengersponge 1.2 3 color (0.7, 0.8, 0.95) reflect 0.5
+		}
+	}
 }
 
 # infinite primitives
-translate (-64, 0, -8) { infcylinder 0.5 color (0.6, 0.8, 1) }
-translate (-68, 6, -8) { infcone 15 color (0.6, 0.8, 1) }
+translate (-64, 0, 0) { infcylinder 0.5 color (0.6, 0.8, 1) }
+translate (-68, 6, 0) { infcone 15 color (0.6, 0.8, 1) }
 
 # operations, a row along X at z = -16
 translate (0, 1.5, -16) {

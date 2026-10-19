@@ -66,6 +66,7 @@ public static class SceneDefs
             new("march",            0,  [S, S, S]), // maxDistance maxSteps maxShadowSteps
             new("gravity",          0,  [S]),       // acceleration, 0 starts without gravity
             new("player",           0,  [S, S, S]), // radius walkingSpeed climbMultiplier
+            new("bounces",          0,  [S]),       // reflections deep, 0..3
         }
         .ToDictionary(d => d.Name);
 

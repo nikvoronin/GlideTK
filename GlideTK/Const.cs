@@ -29,6 +29,7 @@ public static class Const
     public const string UF_LIGHT = "light";
     public const string UF_SHADOWS = "shadows";
     public const string UF_MARCH = "march";
+    public const string UF_BOUNCES = "bounces";
     public const string UF_TEXT_SCREEN_SIZE = "screenSize";
     public const string UF_TEXT_ATLAS = "atlas";
 

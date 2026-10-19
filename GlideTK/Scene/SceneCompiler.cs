@@ -36,7 +36,7 @@ public class SceneCompiler
     readonly SceneShapes shapes;
     readonly List<Leaf> leaves = [];
     readonly List<DomainStep> chain = [];
-    readonly List<Vector3> materials = [DEFAULT_COLOR];
+    readonly List<Vector4> materials = [new(DEFAULT_COLOR, 0f)];   // rgb, reflection
     List<Vector4> code = [];
     int distDepth, posDepth;
 
@@ -182,10 +182,7 @@ public class SceneCompiler
         }
 
         int materialBase = data.Count;
-        foreach (Vector3 color in materials)
-        {
-            data.Add(new Vector4(color, 1f));
-        }
+        data.AddRange(materials);
 
         data[0] = new Vector4(materialBase, bvhStart, nodes.Count, always.Count);
 
@@ -267,7 +264,10 @@ public class SceneCompiler
             vectors[0].Normalize();
         }
 
-        Emit(node.Def.Opcode, Material(node.Color), PackArgs(scalars, vectors));
+        Emit(
+            node.Def.Opcode, 
+            Material(node.Color, node.Reflect), 
+            PackArgs(scalars, vectors));
         PushDist(node);
 
         return SceneBounds.Primitive(node.Def.Opcode, scalars, vectors);
@@ -406,17 +406,21 @@ public class SceneCompiler
         return rows;
     }
 
-    float Material(Vec3Expr color)
+    /// <summary>Index of the material of the color and the reflection (0..1, NaN is 0)</summary>
+    float Material(Vec3Expr color, ExprBase reflect)
     {
-        if (color == null)
+        if (color == null && reflect == null)
             return 0f;
 
-        Vector3 rgb = color.Eval(t);
-        int index = materials.IndexOf(rgb);
+        float k = reflect?.Eval(t) ?? 0f;
+        k = k > 0f ? MathF.Min(k, 1f) : 0f;
+
+        var material = new Vector4(color?.Eval(t) ?? DEFAULT_COLOR, k);
+        int index = materials.IndexOf(material);
         if (index < 0)
         {
             index = materials.Count;
-            materials.Add(rgb);
+            materials.Add(material);
         }
 
         return index;
