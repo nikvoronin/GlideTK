@@ -188,8 +188,9 @@ translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }
 
 ### 2026
 
-- Oct 19. GitHub Action: a pushed `v*` tag from master builds Windows x64 (.NET 10, framework-dependent) and creates a draft release with the zip.
-- Oct 19. Reflections: `reflect k` of a material and the `bounces n` directive (up to 3), a scene without `reflect` renders as before.
+- Oct 19:
+    - GitHub Action builds and creates a draft release with the zip.
+    - Reflections: `reflect k` of a material and the `bounces n` directive (up to 3), a scene without `reflect` renders as before.
 - Oct 18:
     - Scene directives `sun`, `fog`, `camera`, `sky`, `light`, `gamma`, `shadows`, `march`, `gravity` and `player`: light, fog, shadows, ray marching, the start camera and the player are set by the scene file.
     - Primitives `mandelbulb` and `mengersponge` (iq distance estimate and the iterated cross of bars).
