@@ -32,7 +32,7 @@ jobs:
 
       - name: Publish
         shell: bash
-        run: dotnet publish GlideTK/GlideTK.csproj -c Release -r win-x64 -p:Version="${TAG#v}" -o publish
+        run: dotnet publish GlideTK/GlideTK.csproj -c Release -r win-x64 -p:Version="${TAG#v}" -p:DebugType=none -o publish
 
       - name: Zip
         shell: bash
