@@ -1,0 +1,50 @@
+name: Release
+
+# A pushed tag v* builds Windows x64 (framework-dependent, .NET 10) and creates a DRAFT release:
+# fill in the release notes on GitHub and press Publish.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag must be on master
+        shell: bash
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/master \
+            || { echo "::error::Tag $TAG is not on master"; exit 1; }
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish
+        shell: bash
+        run: dotnet publish GlideTK/GlideTK.csproj -c Release -r win-x64 -p:Version="${TAG#v}" -o publish
+
+      - name: Zip
+        shell: bash
+        run: |
+          echo "ZIP=glidetk_${TAG#v}_bin-win64-net10.zip" >> "$GITHUB_ENV"
+          pwsh -Command "Compress-Archive -Path publish/* -DestinationPath glidetk_${TAG#v}_bin-win64-net10.zip"
+
+      - name: Draft release
+        shell: bash
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" --clobber
+          else
+            gh release create "$TAG" "$ZIP" --draft --verify-tag --title "$TAG" --generate-notes
+          fi

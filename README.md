@@ -18,6 +18,12 @@ It supports BVH culling on the GPU and CPU, soft shadows, a bitmap-font HUD, and
 - F7 - Bounding volume hierarchy on/off (on by default, off evaluates every object to compare the speed)
 - F5 - Reload scene (`scenes/*.scene` next to the executable, or the file passed as the first argument: `GlideTK.exe scenes/showcase.scene`)
 
+## Download
+
+- Windows 10/11 x64 builds are on the [Releases](https://github.com/nikvoronin/GLDETK/releases) page: `glidetk_<version>_bin-win64-net10.zip`.
+- It is framework-dependent, so the [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) must be installed.
+- Unzip and run `GlideTK.exe` for default scene or one of the `run-*.cmd` scripts.
+
 ## Scene language
 
 Scene files live in `GlideTK/scenes/*.scene` and are copied next to the executable.
@@ -182,6 +188,7 @@ translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }
 
 ### 2026
 
+- Oct 19. GitHub Action: a pushed `v*` tag from master builds Windows x64 (.NET 10, framework-dependent) and creates a draft release with the zip.
 - Oct 19. Reflections: `reflect k` of a material and the `bounces n` directive (up to 3), a scene without `reflect` renders as before.
 - Oct 18:
     - Scene directives `sun`, `fog`, `camera`, `sky`, `light`, `gamma`, `shadows`, `march`, `gravity` and `player`: light, fog, shadows, ray marching, the start camera and the player are set by the scene file.
