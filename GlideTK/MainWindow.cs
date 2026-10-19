@@ -1,5 +1,6 @@
 ﻿using GlideTK.Scene;
 using GlideTK.Text;
+using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
@@ -180,6 +181,10 @@ public class MainWindow : GameWindow
         DrawHud();
 
         SwapBuffers();
+
+        // the caption must reach the screen before the blocking build starts
+        if (render.Announced)
+            GL.Finish();
     }
 
     /// <summary>
@@ -196,6 +201,17 @@ public class MainWindow : GameWindow
 
         var at = new Vector2(HUD_MARGIN, HUD_MARGIN);
         at.Y += text.Print(stats, at, HUD_TEXT, HUD_SCALE, HUD_BACKGROUND).Y + HUD_MARGIN;
+
+        if (render.Compiling)
+        {
+            at.Y += text.Print(
+                "Compiling shader..." +
+                    (render.CompilingSeconds > 0 ? $" {render.CompilingSeconds:0.0} s" : ""),
+                at,
+                HUD_HELP,
+                HUD_SCALE,
+                HUD_BACKGROUND).Y + HUD_MARGIN;
+        }
 
         if (showHelp)
         {

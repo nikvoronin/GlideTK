@@ -10,6 +10,17 @@ namespace GlideTK;
 /// </summary>
 public static class ShaderLoader
 {
+    /// <summary>A program that is compiling and linking, perhaps in the driver threads</summary>
+    public readonly record struct PendingProgram(
+        int Program,
+        int Vertex,
+        int Fragment,
+        string VertexFilename,
+        string FragmentFilename);
+
+    // GL_COMPLETION_STATUS_KHR of GL_KHR_parallel_shader_compile
+    const int COMPLETION_STATUS = 0x91B1;
+
     public static string LoadEmbeddedFile(string filename)
     {
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(filename);
@@ -18,11 +29,14 @@ public static class ShaderLoader
         return reader.ReadToEnd();
     }
 
+    /// <summary>
+    /// Starts compiling, the status is not queried: that would wait for the driver
+    /// </summary>
     /// <param name="patch">Changes the source before compiling,
     /// e.g. injects the generated code</param>
-    public static int CompileShader(
-        ShaderType type, 
-        string filename, 
+    static int StartShader(
+        ShaderType type,
+        string filename,
         Func<string, string> patch = null)
     {
         string source = LoadEmbeddedFile(filename);
@@ -33,31 +47,31 @@ public static class ShaderLoader
         GL.ShaderSource(h_shader, source);
         GL.CompileShader(h_shader);
 
-        GL.GetShader(h_shader, ShaderParameter.CompileStatus, out int status);
-        if (status == 0)
-        {
-            string log = GL.GetShaderInfoLog(h_shader);
-            GL.DeleteShader(h_shader);
-
-            throw new InvalidOperationException(
-                $"{filename} compile error:\n{log}");
-        }
-
         return h_shader;
     }
 
+    /// <returns>Compile error or null</returns>
+    static string CompileError(int h_shader, string filename)
+    {
+        GL.GetShader(h_shader, ShaderParameter.CompileStatus, out int status);
+
+        return status == 0
+            ? $"{filename} compile error:\n{GL.GetShaderInfoLog(h_shader)}"
+            : null;
+    }
+
     /// <summary>
-    /// Links a program of a vertex and a fragment shader, 
-    /// the shaders are deleted after linking
+    /// Starts compiling and linking a program of a vertex and a fragment shader,
+    /// does not wait for the driver: poll IsDone and call FinishLink
     /// </summary>
     /// <param name="patchFragment">Changes the fragment source before compiling</param>
-    public static int LinkProgram(
+    public static PendingProgram BeginLink(
         string vertexFilename,
         string fragmentFilename,
         Func<string, string> patchFragment = null)
     {
-        int h_vertex = CompileShader(ShaderType.VertexShader, vertexFilename);
-        int h_fragment = CompileShader(ShaderType.FragmentShader, fragmentFilename, patchFragment);
+        int h_vertex = StartShader(ShaderType.VertexShader, vertexFilename);
+        int h_fragment = StartShader(ShaderType.FragmentShader, fragmentFilename, patchFragment);
 
         int h_program = GL.CreateProgram();
 
@@ -66,21 +80,70 @@ public static class ShaderLoader
 
         GL.LinkProgram(h_program);
 
-        GL.DetachShader(h_program, h_vertex);
-        GL.DeleteShader(h_vertex);
-        GL.DetachShader(h_program, h_fragment);
-        GL.DeleteShader(h_fragment);
+        return new PendingProgram(
+            h_program,
+            h_vertex,
+            h_fragment,
+            vertexFilename,
+            fragmentFilename);
+    }
 
-        GL.GetProgram(h_program, GetProgramParameterName.LinkStatus, out int status);
-        if (status == 0)
+    /// <summary>
+    /// The driver has finished compiling and linking (needs GL_KHR_parallel_shader_compile)
+    /// </summary>
+    public static bool IsDone(PendingProgram pending)
+    {
+        GL.GetProgram(
+            pending.Program,
+            (GetProgramParameterName)COMPLETION_STATUS,
+            out int done);
+
+        return done != 0;
+    }
+
+    /// <summary>
+    /// Waits for the program if it is not done yet,
+    /// the shaders are deleted after linking
+    /// </summary>
+    /// <returns>The linked program</returns>
+    /// <exception cref="InvalidOperationException">Compile or link error</exception>
+    public static int FinishLink(PendingProgram pending)
+    {
+        string error = CompileError(pending.Vertex, pending.VertexFilename)
+            ?? CompileError(pending.Fragment, pending.FragmentFilename);
+
+        if (error == null)
         {
-            string log = GL.GetProgramInfoLog(h_program);
-            GL.DeleteProgram(h_program);
-
-            throw new InvalidOperationException(
-                $"Shader program ({fragmentFilename}) link error:\n{log}");
+            GL.GetProgram(pending.Program, GetProgramParameterName.LinkStatus, out int status);
+            if (status == 0)
+            {
+                error = $"Shader program ({pending.FragmentFilename}) link error:\n" +
+                    GL.GetProgramInfoLog(pending.Program);
+            }
         }
 
-        return h_program;
+        GL.DetachShader(pending.Program, pending.Vertex);
+        GL.DeleteShader(pending.Vertex);
+        GL.DetachShader(pending.Program, pending.Fragment);
+        GL.DeleteShader(pending.Fragment);
+
+        if (error != null)
+        {
+            GL.DeleteProgram(pending.Program);
+
+            throw new InvalidOperationException(error);
+        }
+
+        return pending.Program;
     }
+
+    /// <summary>
+    /// Links a program of a vertex and a fragment shader and waits for it
+    /// </summary>
+    /// <param name="patchFragment">Changes the fragment source before compiling</param>
+    public static int LinkProgram(
+        string vertexFilename,
+        string fragmentFilename,
+        Func<string, string> patchFragment = null)
+        => FinishLink(BeginLink(vertexFilename, fragmentFilename, patchFragment));
 }

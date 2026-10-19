@@ -189,6 +189,8 @@ translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }
 ### 2026
 
 - Oct 19:
+    - The shader builds in the background at the first start and after F5 with `GL_KHR_parallel_shader_compile`: the window stays alive, keeps drawing the previous scene (black at the first start) and shows `Compiling shader...`.
+      Drivers without the extension (Intel Arc) show the caption for one frame and then block while building.
     - GitHub Action builds and creates a draft release with the zip.
     - Reflections: `reflect k` of a material and the `bounces n` directive (up to 3), a scene without `reflect` renders as before.
 - Oct 18:

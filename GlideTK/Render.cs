@@ -2,6 +2,7 @@
 using GlideTK.Scene.Glsl;
 using OpenTK.Graphics.OpenGL4;
 using System;
+using System.Diagnostics;
 
 
 namespace GlideTK;
@@ -34,8 +35,36 @@ public class Render
     int mapBlockSize;
     int uploadedSceneVersion = -1;
 
-    int builtShaderRevision = -1;
+    // the scene revision the running shader was built for,
+    // the scene data is uploaded only when it matches the shader
+    int installedRevision = -1;
     string builtSceneGlsl;
+
+    // GL_KHR_parallel_shader_compile: the shader is built in the driver threads
+    // while the running one keeps drawing the previous picture
+    bool asyncCompile;
+    ShaderLoader.PendingProgram? pending;
+    int pendingRevision;
+    string pendingGlsl;
+
+    // a blocking build freezes the window: the caption frames are shown for a while first,
+    // otherwise the driver has not presented them yet when the build blocks
+    const double ANNOUNCE_SECONDS = 0.2;
+    bool announced;
+    readonly Stopwatch announceWatch = new();
+    readonly Stopwatch compileWatch = new();
+
+    /// <summary>
+    /// The shader is building (or about to), the picture is still of the previous scene
+    /// or black at the first start
+    /// </summary>
+    public bool Compiling => pending != null || announced;
+
+    /// <summary>The caption frames before a blocking build, the window freezes next</summary>
+    public bool Announced => announced;
+
+    /// <summary>0 until the build has started, the blocking build never shows more</summary>
+    public double CompilingSeconds => pending != null ? compileWatch.Elapsed.TotalSeconds : 0;
 
     /// <summary>
     /// Error of the last shader generated for the scene, null when it built fine.
@@ -48,25 +77,62 @@ public class Render
         return GL.GetUniformLocation(h_shaderProgram, uniformName);
     }
 
-    /// <summary>
-    /// Generates the scene functions of the fragment shader and links the program,
-    /// nothing changes when the generated code is the same as in the running shader
-    /// </summary>
-    private void BuildShader(SceneState scene)
+    private static bool HasExtension(string name)
     {
-        builtShaderRevision = scene.ShaderRevision;
+        GL.GetInteger(GetPName.NumExtensions, out int count);
+        for (int i = 0; i < count; i++)
+        {
+            if (GL.GetString(StringNameIndexed.Extensions, i) == name)
+                return true;
+        }
 
+        return false;
+    }
+
+    private bool NeedsBuild(SceneState scene)
+    {
+        return SceneGlsl.Generate(scene.Shapes) != builtSceneGlsl;
+    }
+
+    /// <summary>
+    /// Generates the scene functions of the fragment shader and starts building the program,
+    /// nothing changes when the generated code is the same as in the running shader.
+    /// Without the parallel compile the program is installed right here.
+    /// </summary>
+    private void StartBuild(SceneState scene)
+    {
         string sceneGlsl = SceneGlsl.Generate(scene.Shapes);
         if (sceneGlsl == builtSceneGlsl)
+        {
+            installedRevision = scene.ShaderRevision;
             return;
+        }
+
+        pending = ShaderLoader.BeginLink(
+            Const.VERTEX_FILENAME,
+            Const.FRAGMENT_FILENAME,
+            source => SceneGlsl.Inject(source, scene.Shapes));
+        pendingRevision = scene.ShaderRevision;
+        pendingGlsl = sceneGlsl;
+        compileWatch.Restart();
+
+        if (!asyncCompile)
+            FinishBuild();
+    }
+
+    /// <summary>
+    /// Replaces the running shader with the built one, on an error the previous one keeps running
+    /// </summary>
+    private void FinishBuild()
+    {
+        var built = pending.Value;
+        pending = null;
+        installedRevision = pendingRevision;
 
         int program;
         try
         {
-            program = ShaderLoader.LinkProgram(
-                Const.VERTEX_FILENAME,
-                Const.FRAGMENT_FILENAME,
-                source => SceneGlsl.Inject(source, scene.Shapes));
+            program = ShaderLoader.FinishLink(built);
         }
         catch (InvalidOperationException e)
         {
@@ -78,11 +144,13 @@ public class Render
             GL.DeleteProgram(h_shaderProgram);
 
         h_shaderProgram = program;
-        builtSceneGlsl = sceneGlsl;
+        builtSceneGlsl = pendingGlsl;
         ShaderError = null;
 
         GL.UseProgram(h_shaderProgram);
         BindMapBlock();
+        if (ubo_GlobalMap == 0)
+            CreateMapUbo();
 
         uf_iGlobalTime = GetUniformLocation(Const.UF_TIMER);
         uf_iResolution = GetUniformLocation(Const.UF_RESOLUTION);
@@ -101,11 +169,9 @@ public class Render
 
     public void Start(SceneState scene)
     {
-        BuildShader(scene);
-        if (h_shaderProgram == 0)
-            throw new InvalidOperationException(ShaderError);
-
-        CreateMapUbo();
+        asyncCompile = HasExtension("GL_KHR_parallel_shader_compile");
+        if (asyncCompile)
+            GL.Khr.MaxShaderCompilerThreads(uint.MaxValue);
 
         // core profile requires a bound VAO,
         // the fullscreen triangle is built from gl_VertexID
@@ -193,8 +259,30 @@ public class Render
         Camera camera, 
         SceneState scene)
     {
-        if (scene.ShaderRevision != builtShaderRevision)
-            BuildShader(scene);
+        if (pending != null && (!asyncCompile || ShaderLoader.IsDone(pending.Value)))
+            FinishBuild();
+        if (pending == null && scene.ShaderRevision != installedRevision)
+        {
+            // a blocking build freezes the window: draw the caption frame first
+            if (!announced && !asyncCompile && NeedsBuild(scene))
+            {
+                announced = true;
+                announceWatch.Restart();
+            }
+            else if (!announced || announceWatch.Elapsed.TotalSeconds >= ANNOUNCE_SECONDS)
+            {
+                announced = false;
+                StartBuild(scene);
+            }
+        }
+
+        // nothing to draw until the first shader is built
+        if (h_shaderProgram == 0)
+        {
+            GL.ClearColor(0f, 0f, 0f, 1f);
+            GL.Clear(ClearBufferMask.ColorBufferBit);
+            return;
+        }
 
         GL.UseProgram(h_shaderProgram);
         GL.BindVertexArray(h_vao);
@@ -213,7 +301,9 @@ public class Render
         GL.Uniform3(uf_March, scene.Env.March);
         GL.Uniform1(uf_Bounces, scene.Env.Bounces);
 
-        UploadScene(scene);
+        // while the new shader builds, the old one keeps the old scene data
+        if (scene.ShaderRevision == installedRevision)
+            UploadScene(scene);
 
         GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
 
@@ -225,5 +315,7 @@ public class Render
         GL.DeleteVertexArray(h_vao);
         GL.DeleteBuffer(ubo_GlobalMap);
         GL.DeleteProgram(h_shaderProgram);
+        if (pending != null)
+            GL.DeleteProgram(pending.Value.Program);
     }
 }
