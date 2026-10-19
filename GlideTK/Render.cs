@@ -23,6 +23,7 @@ public class Render
         uf_Light,
         uf_Shadows,
         uf_March,
+        uf_Bounces,
         ubo_GlobalMap;
 
     /// <summary>
@@ -95,6 +96,7 @@ public class Render
         uf_Light = GetUniformLocation(Const.UF_LIGHT);
         uf_Shadows = GetUniformLocation(Const.UF_SHADOWS);
         uf_March = GetUniformLocation(Const.UF_MARCH);
+        uf_Bounces = GetUniformLocation(Const.UF_BOUNCES);
     }
 
     public void Start(SceneState scene)
@@ -209,6 +211,7 @@ public class Render
         GL.Uniform4(uf_Light, scene.Env.Light);
         GL.Uniform2(uf_Shadows, scene.Env.Shadows);
         GL.Uniform3(uf_March, scene.Env.March);
+        GL.Uniform1(uf_Bounces, scene.Env.Bounces);
 
         UploadScene(scene);
 

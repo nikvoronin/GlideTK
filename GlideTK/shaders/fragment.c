@@ -12,6 +12,7 @@ uniform vec3 sky;	// color of the rays that hit nothing
 uniform vec4 light;	// ambient, specular, shininess, gamma
 uniform vec2 shadows;	// sharpness, max distance (0: no shadows)
 uniform vec3 march;	// max distance, max steps, max shadow steps
+uniform int bounces;	// reflections deep (0..3), 0 turns them off
 
 // Compiled scene program, uploaded by Render from SceneState (see Scene/SceneOpcodes.cs).
 // g_map[0] = (materialBase, bvhStart, bvhNodeCount, alwaysCount),
@@ -520,6 +521,11 @@ vec3 materialColor(float id)
 	return g_map[int(g_map[0].x) + int(id)].rgb;
 }
 
+float materialReflect(float id)
+{
+	return g_map[int(g_map[0].x) + int(id)].w;
+}
+
 vec2 castRay(in vec3 ro, in vec3 rd)
 {
 	float MAX_DIST = march.x;
@@ -564,13 +570,13 @@ vec2 castRay(in vec3 ro, in vec3 rd)
 }
 
 // TODO generalize over map() it similar
-float softshadow(in vec3 ro, in vec3 rd)
+float softshadow(in vec3 ro, in vec3 rd, in int maxSteps)
 {
 	const float INIT_T = 0.02;
 	const float INIT_RES = 0.5;			// max step: 0.1 doubles the frame time with no visible gain
 	float MAX_DIST = shadows.y;
 	const float MIN_DIST = 0.001;
-	int MAX_RAY_STEPS = int(march.z);	// higher -> longer shadow distance
+	int MAX_RAY_STEPS = maxSteps;		// higher -> longer shadow distance
 	float SHADOW_SMOOTH = shadows.x;	// lower ~ smother, higher -> sharper
 
 	float res = 1.0;
@@ -597,13 +603,10 @@ vec3 calcNormal(in vec3 pos)
 	return normalize(nor);
 }
 
-vec3 render(in vec3 ro, in vec3 rd)
+// Color of the surface hit by the ray rd at the distance t, shadowSteps limits the shadow ray
+vec3 shade(in vec3 rd, in vec3 pos, in vec3 nor, in float t, in float material, in int shadowSteps)
 {
-	vec2 res = castRay(ro, rd);
-	vec3 col = materialColor(res.y);
-	float t = res.x;
-	vec3 pos = ro + t * rd;
-	vec3 nor = calcNormal(pos);
+	vec3 col = materialColor(material);
 	vec3 ref = reflect(rd, nor);
 
 	// lighitng
@@ -613,7 +616,7 @@ vec3 render(in vec3 ro, in vec3 rd)
 	float spe = pow(clamp(dot(ref, lig), 0.0, 1.0), light.z);
 
 	if (shadows.y > 0.0)
-		dif *= softshadow(pos, lig);
+		dif *= softshadow(pos, lig, shadowSteps);
 
 	vec3 lin = vec3(0.0);
 	lin += dif;
@@ -623,10 +626,44 @@ vec3 render(in vec3 ro, in vec3 rd)
 
 	col = mix(col, fogColor, 1.0 - exp(-fogDensity * t * t));	// distance fog
 
-	if (t > march.x)
-		col = sky;
-	
 	return vec3(clamp(col, 0.0, 1.0));
+}
+
+// The primary ray and up to `bounces` reflected rays: a surface of the reflection k shows
+// k of the next ray and 1 - k of itself
+vec3 render(in vec3 ro, in vec3 rd)
+{
+	vec3 total = vec3(0.0);
+	float weight = 1.0;
+
+	for (int bounce = 0; bounce <= 3; bounce++)
+	{
+		vec2 res = castRay(ro, rd);
+		float t = res.x;
+		if (t > march.x)
+		{
+			total += weight * sky;
+			break;
+		}
+
+		vec3 pos = ro + t * rd;
+		vec3 nor = calcNormal(pos);
+
+		// a reflected ray gets a short shadow ray
+		int shadowSteps = bounce == 0 ? int(march.z) : int(march.z) / 4;
+		vec3 col = shade(rd, pos, nor, t, res.y, shadowSteps);
+
+		float k = bounce < bounces ? materialReflect(res.y) : 0.0;
+		total += weight * (1.0 - k) * col;
+		if (k <= 0.0)
+			break;
+
+		weight *= k;
+		ro = pos + nor * 0.002;	// off the surface: the next ray must not hit it again
+		rd = reflect(rd, nor);
+	}
+
+	return clamp(total, 0.0, 1.0);
 }
 
 void main(void)

@@ -11,7 +11,7 @@ namespace GlideTK.Scene;
 ///
 ///   scene  := (directive | node)*
 ///   directive := a name of SceneDefs.Directives and its args: 'sun' vec, 'fog' vec arg, 'camera' vec vec, ...
-///   node   := prim args ['color' vec] | block args '{' node+ '}'
+///   node   := prim args ['color' vec] ['reflect' arg] | block args '{' node+ '}'
 ///   args   := (arg | vec)*                as declared in <see cref="SceneDefs"/>
 ///   vec    := '(' expr ',' expr ',' expr ')'
 ///   arg    := number | 't' | 'pi' | func '(' expr, ... ')' | '(' expr ')' | '-' arg
@@ -120,6 +120,13 @@ public class SceneParser
         {
             Next();
             node.Color = ParseVec();
+        }
+
+        if (Peek.Kind == TokenKind.Ident
+            && Peek.Text == "reflect")
+        {
+            Next();
+            node.Reflect = ParseArg();
         }
 
         return node;

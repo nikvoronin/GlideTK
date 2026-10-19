@@ -13,4 +13,5 @@ public sealed class PrimNode : SceneNode
     public List<ExprBase> Scalars = [];     // Scalar and Angle arguments in order
     public List<Vec3Expr> Vectors = [];     // Vector arguments in order
     public Vec3Expr Color;                  // null -> default material
+    public ExprBase Reflect;                // null -> 0, no reflection
 }
