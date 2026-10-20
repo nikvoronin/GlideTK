@@ -27,10 +27,15 @@ It supports BVH culling on the GPU and CPU, soft shadows, a bitmap-font HUD, and
 ## Scene language
 
 Scene files live in `GlideTK/scenes/*.scene` and are copied next to the executable.
-`GlideTK.exe` loads `scenes/default.scene`, or the file given as the first argument:
+
+`GlideTK.exe` loads `scenes/default.scene`, or the file given as an argument.
+`--size WxH` sets the window size (320..16384 each side, 1024x768 by default);
+the `run-*.cmd` scripts pass their arguments on:
 
 ```shell
 GlideTK.exe scenes/showcase.scene
+GlideTK.exe scenes/showcase.scene --size 1920x1080
+run-showcase.cmd --size=1280x720
 ```
 
 `F5` reloads the scene at runtime. The parsed scene is compiled every physics tick into a vec4 program
@@ -168,11 +173,93 @@ without them the defaults apply. The values are shader uniforms: changing them d
 - numbers, `t` (physics time in seconds), `pi`
 - `+ - * /`, unary minus, parentheses
 - `sin(x) cos(x) abs(x) min(a, b) max(a, b)`
+- vectors `(x, y, z)` with arithmetic, components and functions, see [Vectors](#vectors)
 
 Arguments of an element are separated by spaces, so arithmetic in a separate argument must be parenthesized:
 `sphere (1 + 0.2 * sin(t))`. Inside a vector any expression is allowed: `repeat (10, 10 + sin(t), 10) { ... }`
 
 Comments start with `#` and last to the end of the line.
+
+#### Variables
+
+`var name = expression`,
+
+the whole expression without parentheses (`var wave = sin(t * 2) - 1.0`); then `name` is used like a number: `translate (0, wave, 0) { sphere (1 + wave * 0.1) }`.
+
+A name consists of letters (of any alphabet, e.g. Greek or Cyrillic), digits and `_`. The first character is a letter or `_`, not a digit. Spaces, `-`, `.` and other signs are not allowed. The case matters: `Speed` and `speed` are different variables.
+
+A variable is visible from its definition to the end of the enclosing block (to the end of the file at the top level), is evaluated at the time `t` of every use, and cannot be defined twice or named like a keyword, function, directive, primitive or operation.
+
+#### Vectors
+
+A vector is `(x, y, z)`, every component is any expression. It can be stored in a variable and used wherever an element takes a vector: a position, a size, a direction, `color`, `limit`, the environment directives.
+
+```text
+var center = (0, 1.5, 0)
+var step   = (4, 0, 0)
+var tint   = mix((1, 0, 0), (0, 0, 1), (sin(t) + 1) * 0.5)
+translate (center + step * 2) { 
+    sphere (1 + center.y * 0.1) color tint 
+}
+```
+
+| Expression | Result |
+| --- | --- |
+| `a + b`, `a - b` | vector, by components |
+| `a * b`, `a / b` | vector, by components |
+| `a * k`, `k * a`, `a / k` | vector, the number `k` is applied to every component |
+| `-a` | vector |
+| `a.x` `a.y` `a.z` (or `a.r` `a.g` `a.b`) | number, a component; works after any vector: `(a + b).y`, `normalize(a).z` |
+| `length(a)` | number |
+| `dot(a, b)` | number |
+| `normalize(a)` | vector of length 1, a zero vector stays zero |
+| `cross(a, b)` | vector |
+| `mix(a, b, k)` | `a + (b - a) * k`: vectors `a`, `b` give a vector, numbers give a number |
+
+A number and a vector are not mixed in `+` and `-`. An element takes what it declares: a vector is not accepted where a number is expected and the other way round.
+`sin`, `cos`, `abs`, `min` and `max` take numbers only.
+`length`, `dot`, `normalize`, `cross` and `mix` are reserved names, a variable cannot take them.
+
+### Grammar
+
+The parser is a recursive descent one (`GlideTK/Scene/SceneParser.cs`), the same grammar is in its summary:
+
+```text
+scene     := (var | directive | node)*
+var       := 'var' name '=' expr
+directive := dname args                            top level only
+node      := prim | block
+prim      := pname args ['color' vec] ['reflect' arg]
+block     := bname args ['limit' vec] '{' (var | node)+ '}'     'limit' only after 'repeat'
+args      := arg*                                  as declared for the element: a number or a vector each
+vec       := '(' expr ',' expr ',' expr ')'
+expr      := term (('+' | '-') term)*
+term      := arg (('*' | '/') arg)*
+arg       := number | 't' | 'pi' | name | func '(' expr (',' expr)* ')' | vec | '(' expr ')' | '-' arg | arg '.' comp
+comp      := 'x' | 'y' | 'z' | 'r' | 'g' | 'b'
+
+number    := digit+ ['.' digit*] | '.' digit+      no exponent, the sign is the unary minus
+name      := (letter | '_') (letter | digit | '_')*
+comment   := '#' up to the end of the line
+```
+
+- `dname` is a directive of the [Environment](#environment) table,
+- `pname` a primitive,
+- `bname` a domain, distance or object operation, 
+- `func` a function of [Expressions](#expressions) or [Vectors](#vectors) with a fixed number of arguments, 
+- `name` a variable.
+
+A directive name is looked up first, then a primitive and an operation; `color`, `reflect`, `limit`, `var`, `t`, `pi` and all these names are reserved, a variable cannot take them.
+
+- White space and line breaks only separate tokens, they have no other meaning.
+- The arguments `args` of an element are separated by white space, so every `arg` is a single term: a compound arithmetic argument is written in parentheses, `sphere (1 + 0.2 * sin(t))`.
+
+Inside a vector, a function call, the right side of `var` and parentheses any `expr` is allowed.
+
+- A block has at least one node, a block of variables only is an error.
+- A value is a number or a vector: `var` takes either, `+` and `-` do not mix them, `*` and `/` take a vector and a number, an element takes the type it declares.
+- A variable lives from its `var` to the end of the enclosing block.
+- A directive outside the top level, an unknown name, a wrong number of arguments or an unclosed block is a parse error `file(line,column): message`; F5 keeps the previous scene and shows the error.
 
 ### Example
 
@@ -188,6 +275,10 @@ translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }
 
 ### 2026
 
+- Oct 20:
+    - The `--size WxH` command line option sets the window size.
+    - Variables in the scene language: `var name = expression`, visible to the end of the block.
+    - Vectors in the scene language: vector variables, arithmetic by components, components `.x .y .z` (`.r .g .b`), functions `length`, `dot`, `normalize`, `cross` and `mix`.
 - Oct 19:
     - The shader builds in the background at the first start and after F5 with `GL_KHR_parallel_shader_compile`: the window stays alive, keeps drawing the previous scene (black at the first start) and shows `Compiling shader...`.
       Drivers without the extension (Intel Arc) show the caption for one frame and then block while building.

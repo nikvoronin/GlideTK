@@ -13,5 +13,7 @@ public enum TokenKind
     Minus,
     Star,
     Slash,
+    Equals,
+    Dot,
     End
 }

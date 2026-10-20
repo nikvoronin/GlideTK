@@ -1,1 +1,1 @@
-GlideTK.exe scenes/showcase.scene
+GlideTK.exe scenes/showcase.scene %*

@@ -3,7 +3,9 @@
 
 bounces 3
 camera (56.2, 1.0, -15.3) (-1, 0, 0)
-sun (sin(t * 0.1) * 60, 19, cos(t * 0.1) * 60)
+
+var slow_t = t * 0.1
+sun (sin(slow_t) * 60, 19, cos(slow_t) * 60)
 
 plane (0, -1, 0) -10 reflect 1
 
@@ -19,41 +21,43 @@ smooth 1 {
 
 # primitives, a row along X at z = -8
 translate (0, 1.5, 0) {
-    translate (-60, 0, 0) { sphere 1 color (1, 0.5, 0.4) }
-    translate (-56, 0, 0) { box (1, 1, 1) }
-    translate (-52, 0, 0) { roundbox (0.8, 0.8, 0.8) 0.2 }
-    translate (-48, 0, 0) { boxframe (1, 1, 1) 0.1 }
-    translate (-44, 0, 0) { torus 1 0.3 }
-    translate (-40, 0, 0) { cappedtorus 120 1 0.25 }
-    translate (-36, 0, 0) { link 0.5 0.6 0.2 }
-    translate (-32, 0, 0) { cylinder 0.8 1 }
-    translate (-28, 0, 0) { segcylinder (-0.8, -0.8, 0) (0.8, 0.8, 0) 0.4 }
-    translate (-24, 0, 0) { roundcylinder 0.8 0.2 1 }
-    translate (-20, 1, 0) { cone 30 2 }
-    translate (-16, 0, 0) { cappedcone 1 1 0.4 }
-    translate (-12, 0, 0) { segcone (0, -1, 0) (0, 1, 0) 1 0.3 }
-    translate (-8, -1, 0) { solidangle 40 2 }
-    translate (-4, 0, 0) { cutsphere 1 0.4 }
-    translate (0, 0, 0) { cuthollowsphere 1 0.4 0.08 }
-    translate (4, 0, 0) { deathstar 1 0.8 0.8 }
-    translate (8, -1, 0) { roundcone 0.8 0.3 1.8 }
-    translate (12, 0, 0) { segroundcone (0, -1, 0) (0.5, 1, 0) 0.7 0.3 }
-    translate (16, 0, 0) { ellipsoid (1.2, 0.7, 0.9) }
-    translate (20, 0, 0) { rhombus 1 0.6 0.2 0.1 }
-    translate (24, 0, 0) { octahedron 1.2 }
-    translate (28, -1, 0) { scale 2 { pyramid 1 } }
-    translate (32, 0, 0) { hexprism 0.9 0.5 }
-    translate (36, 0, 0) { triprism 1.5 0.5 }
-    translate (40, 0, 0) { capsule (-0.7, -0.7, 0) (0.7, 0.7, 0) 0.4 }
-    translate (44, -1, 0) { vcapsule 2 0.5 }
-    translate (48, 0, 0) { triangle (-1, -1, 0) (1, -1, 0) (0, 1, 0) }
-    translate (52, 0, 0) { quad (-1, -1, 0) (1, -1, 0) (1, 1, 0) (-1, 1, 0) }
-    translate (56, 0, 0) { 
+	var v_unit = (1, 1, 1)
+
+	translate (-60, 0, 0) { sphere 1 color (1, 0.5, 0.4) }
+	translate (-56, 0, 0) { box (v_unit) }
+	translate (-52, 0, 0) { roundbox (0.8, 0.8, 0.8) 0.2 }
+	translate (-48, 0, 0) { boxframe (v_unit) 0.1 }
+	translate (-44, 0, 0) { torus 1 0.3 }
+	translate (-40, 0, 0) { cappedtorus 120 1 0.25 }
+	translate (-36, 0, 0) { link 0.5 0.6 0.2 }
+	translate (-32, 0, 0) { cylinder 0.8 1 }
+	translate (-28, 0, 0) { segcylinder (-0.8, -0.8, 0) (0.8, 0.8, 0) 0.4 }
+	translate (-24, 0, 0) { roundcylinder 0.8 0.2 1 }
+	translate (-20, 1, 0) { cone 30 2 }
+	translate (-16, 0, 0) { cappedcone 1 1 0.4 }
+	translate (-12, 0, 0) { segcone (0, -1, 0) (0, 1, 0) 1 0.3 }
+	translate (-8, -1, 0) { solidangle 40 2 }
+	translate (-4, 0, 0) { cutsphere 1 0.4 }
+	translate (0, 0, 0) { cuthollowsphere 1 0.4 0.08 }
+	translate (4, 0, 0) { deathstar 1 0.8 0.8 }
+	translate (8, -1, 0) { roundcone 0.8 0.3 1.8 }
+	translate (12, 0, 0) { segroundcone (0, -1, 0) (0.5, 1, 0) 0.7 0.3 }
+	translate (16, 0, 0) { ellipsoid (1.2, 0.7, 0.9) }
+	translate (20, 0, 0) { rhombus 1 0.6 0.2 0.1 }
+	translate (24, 0, 0) { octahedron 1.2 }
+	translate (28, -1, 0) { scale 2 { pyramid 1 } }
+	translate (32, 0, 0) { hexprism 0.9 0.5 }
+	translate (36, 0, 0) { triprism 1.5 0.5 }
+	translate (40, 0, 0) { capsule (-0.7, -0.7, 0) (0.7, 0.7, 0) 0.4 }
+	translate (44, -1, 0) { vcapsule 2 0.5 }
+	translate (48, 0, 0) { triangle (-1, -1, 0) (1, -1, 0) (0, 1, 0) }
+	translate (52, 0, 0) { quad (-1, -1, 0) (1, -1, 0) (1, 1, 0) (-1, 1, 0) }
+	translate (56, 0, 0) { 
 		rotate (0, t * 2, 0) { 
 			mandelbulb 8 6 color (0.9, 0.75, 0.5) 
 		}
 	}
-    translate (60, 0, 0) { 
+	translate (60, 0, 0) { 
 		rotate (0, t * 10, 0) { 
 			mengersponge 1.2 3 color (0.7, 0.8, 0.95) reflect 0.5
 		}
@@ -66,22 +70,82 @@ translate (-68, 6, 0) { infcone 15 color (0.6, 0.8, 1) }
 
 # operations, a row along X at z = -16
 translate (0, 1.5, -16) {
-    translate (-24, 0, 0) { union { box (0.8, 0.8, 0.8) sphere 1.1 color (1, 0.5, 0.4) } }
-    translate (-20, 0, 0) { subtract { box (0.8, 0.8, 0.8) sphere 1.1 color (1, 0.5, 0.4) } }
-    translate (-16, 0, 0) { intersect { box (0.8, 0.8, 0.8) sphere 1.1 color (1, 0.5, 0.4) } }
-    translate (-12, 0, 0) { xor { box (0.8, 0.8, 0.8) sphere 1.1 color (1, 0.5, 0.4) } }
-    translate (-8, 0, 0) { smooth 0.3 { box (0.8, 0.8, 0.8) translate (0, 1, 0) { sphere 0.7 color (1, 0.5, 0.4) } } }
-    translate (-4, 0, 0) { smoothsubtract 0.2 { box (0.8, 0.8, 0.8) sphere 1.1 } }
-    translate (0, 0, 0) { smoothintersect 0.2 { box (0.8, 0.8, 0.8) sphere 1.1 } }
-    translate (4, 0, 0) { round 0.2 { box (0.6, 0.6, 0.6) } }
-    translate (8, 0, 0) { subtract { onion 0.1 { sphere 1 } translate (0, 0, 1) { box (2, 2, 1) } } }
-    translate (12, 0, 0) { elongate (0.8, 0, 0) { sphere 0.6 } }
-    translate (16, 0, 0) { twist 1.5 { box (0.5, 1.2, 0.5) } }
-    translate (20, 0, 0) { bend 0.3 { box (1.5, 0.3, 0.5) } }
-    translate (24, 0, 0) { revolve 1 { box (0.3, 0.6, 0.3) } }
-    translate (28, 0, 0) { extrude 0.3 { octahedron 1 } }
-    translate (32, 0, 0) { displace 0.1 6 { sphere 1 } }
-    translate (36, 0, 0) { mirror (1, 0, 0) { translate (0.8, 0, 0) { sphere 0.5 } } }
-    translate (40, -1, 0) { repeat (sin(t)*1.5, 0, sin(t)*1.5) limit (1, 0, 1) { sphere 0.4 } }
-    translate (44, 0, 0) { rotate (0, sin(t)*180, 30) { box (1, 0.3, 0.6) } }
+	var v_size08 = (0.8, 0.8, 0.8)
+	var v_color10504 = (1, 0.5, 0.4)
+	var size11 = 1.1
+
+	translate (-24, 0, 0) { 
+		union { 
+			box (v_size08) 
+			sphere size11 color (v_color10504) 
+		} 
+	}
+	translate (-20, 0, 0) { 
+		subtract { 
+			box (v_size08) 
+			sphere size11 color (v_color10504) 
+		} 
+	}
+	translate (-16, 0, 0) { 
+		intersect { 
+			box (v_size08) 
+			sphere size11 color (v_color10504) 
+		} 
+	}
+	translate (-12, 0, 0) { 
+		xor { 
+			box (v_size08) 
+			sphere size11 color (v_color10504) 
+		} 
+	}
+	translate (-8, 0, 0) { 
+		smooth 0.3 { 
+			box (v_size08) 
+			translate (0, 1, 0) { 
+				sphere 0.7 color (v_color10504) 
+			} 
+		} 
+	}
+	translate (-4, 0, 0) { 
+		smoothsubtract 0.2 { 
+			box (v_size08) 
+			sphere size11 
+		} 
+	}
+	translate (0, 0, 0) { 
+		smoothintersect 0.2 { 
+			box (v_size08) 
+			sphere size11 
+		} 
+	}
+	translate (4, 0, 0) { 
+		round 0.2 { box (0.6, 0.6, 0.6) } 
+	}
+	translate (8, 0, 0) { 
+		subtract { 
+			onion 0.1 { sphere 1 } 
+			translate (0, 0, 1) { box (2, 2, 1) } 
+		} 
+	}
+	translate (12, 0, 0) { elongate (0.8, 0, 0) { sphere 0.6 } }
+	translate (16, 0, 0) { twist 1.5 { box (0.5, 1.2, 0.5) } }
+	translate (20, 0, 0) { bend 0.3 { box (1.5, 0.3, 0.5) } }
+	translate (24, 0, 0) { revolve 1 { box (0.3, 0.6, 0.3) } }
+	translate (28, 0, 0) { extrude 0.3 { octahedron 1 } }
+	translate (32, 0, 0) { displace 0.1 6 { sphere 1 } }
+	translate (36, 0, 0) { 
+		mirror (1, 0, 0) { 
+			translate (0.8, 0, 0) { sphere 0.5 } 
+		}
+	}
+	translate (40, -1, 0) { 
+		repeat (sin(t) * 1.5, 0, sin(t) * 1.5) limit (1, 0, 1) { 
+			sphere 0.4 
+		} 
+	}
+	translate (44, 0, 0) { 
+		rotate (0, sin(t) * 180, 30) { 
+			box (1, 0.3, 0.6) 
+		} 
+	}
 }

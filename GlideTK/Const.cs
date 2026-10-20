@@ -48,4 +48,8 @@ public static class Const
 
     public const int DISPLAY_XGA_W = 1024;
     public const int DISPLAY_XGA_H = 768;
+
+    // limits of the --size option
+    public const int DISPLAY_MIN = 320;
+    public const int DISPLAY_MAX = 16384;
 }

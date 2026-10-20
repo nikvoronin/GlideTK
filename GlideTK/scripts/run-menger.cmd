@@ -1,1 +1,1 @@
-GlideTK.exe scenes/menger.scene
+GlideTK.exe scenes/menger.scene %*

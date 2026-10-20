@@ -1,1 +1,1 @@
-GlideTK.exe
+GlideTK.exe %*

@@ -1,1 +1,1 @@
-GlideTK.exe scenes/mandelbulb.scene
+GlideTK.exe scenes/mandelbulb.scene %*
