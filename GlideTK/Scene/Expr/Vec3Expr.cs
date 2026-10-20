@@ -2,10 +2,10 @@ using OpenTK.Mathematics;
 
 namespace GlideTK.Scene.Expr;
 
-public sealed class Vec3Expr(ExprBase x, ExprBase y, ExprBase z)
+/// <summary>
+/// A vector value of the scene language, the number is <see cref="ExprBase"/>
+/// </summary>
+public abstract class Vec3Expr
 {
-    public readonly ExprBase X = x, Y = y, Z = z;
-
-    public Vector3 Eval(float t) => 
-        new(X.Eval(t), Y.Eval(t), Z.Eval(t));
+    public abstract Vector3 Eval(float t);
 }
