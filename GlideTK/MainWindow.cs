@@ -20,7 +20,8 @@ public class MainWindow : GameWindow
     /// <param name="scenePath">
     /// Scene file, relative to the executable or absolute
     /// </param>
-    public MainWindow(string scenePath)
+    /// <param name="size">Client area of the window</param>
+    public MainWindow(string scenePath, Vector2i size)
         : base(
             new GameWindowSettings 
             { 
@@ -29,9 +30,7 @@ public class MainWindow : GameWindow
             new NativeWindowSettings
             {
                 Title = Const.APP_NAME,
-                ClientSize = new Vector2i(
-                    Const.DISPLAY_XGA_W, 
-                    Const.DISPLAY_XGA_H),
+                ClientSize = size,
                 APIVersion = new System.Version(3, 3),
                 Profile = ContextProfile.Core,
             })
@@ -43,7 +42,8 @@ public class MainWindow : GameWindow
 
         scene = new SceneState(scenePath);
 
-        // the camera directive is applied at the start only, F5 does not teleport the player
+        // the camera directive is applied at the start only,
+        // F5 does not teleport the player
         camera = new Camera(
             scene.Env.CameraPosition ?? new Vector3(3, 1, 0),
             scene.Env.CameraDirection ?? new Vector3(-1, 0, 0),

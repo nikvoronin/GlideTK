@@ -1,1 +1,1 @@
-GlideTK.exe scenes/escher.scene
+GlideTK.exe scenes/escher.scene %*

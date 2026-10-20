@@ -7,8 +7,9 @@ static class Program
     [STAThread]
     static void Main(string[] args)
     {
-        using var mainWindow = new MainWindow(
-            args.Length > 0 ? args[0] : Const.SCENE_FILENAME);
+        var options = CommandLine.Parse(args);
+
+        using var mainWindow = new MainWindow(options.Scene, options.Size);
         mainWindow.Run();
     }
 }

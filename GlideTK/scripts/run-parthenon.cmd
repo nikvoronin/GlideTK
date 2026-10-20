@@ -1,1 +1,1 @@
-GlideTK.exe scenes/parthenon.scene
+GlideTK.exe scenes/parthenon.scene %*

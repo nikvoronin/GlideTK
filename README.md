@@ -27,10 +27,15 @@ It supports BVH culling on the GPU and CPU, soft shadows, a bitmap-font HUD, and
 ## Scene language
 
 Scene files live in `GlideTK/scenes/*.scene` and are copied next to the executable.
-`GlideTK.exe` loads `scenes/default.scene`, or the file given as the first argument:
+
+`GlideTK.exe` loads `scenes/default.scene`, or the file given as an argument.
+`--size WxH` sets the window size (320..16384 each side, 1024x768 by default);
+the `run-*.cmd` scripts pass their arguments on:
 
 ```shell
 GlideTK.exe scenes/showcase.scene
+GlideTK.exe scenes/showcase.scene --size 1920x1080
+run-showcase.cmd --size=1280x720
 ```
 
 `F5` reloads the scene at runtime. The parsed scene is compiled every physics tick into a vec4 program
@@ -188,6 +193,8 @@ translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }
 
 ### 2026
 
+- Oct 20:
+    - The `--size WxH` command line option sets the window size.
 - Oct 19:
     - The shader builds in the background at the first start and after F5 with `GL_KHR_parallel_shader_compile`: the window stays alive, keeps drawing the previous scene (black at the first start) and shows `Compiling shader...`.
       Drivers without the extension (Intel Arc) show the caption for one frame and then block while building.
