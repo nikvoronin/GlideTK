@@ -9,12 +9,13 @@ namespace GlideTK.Scene;
 /// <summary>
 /// Recursive descent parser of the scene language:
 ///
-///   scene  := (directive | node)*
+///   scene  := (var | directive | node)*
+///   var    := 'var' name '=' expr         a named expression, visible to the end of its block
 ///   directive := a name of SceneDefs.Directives and its args: 'sun' vec, 'fog' vec arg, 'camera' vec vec, ...
-///   node   := prim args ['color' vec] ['reflect' arg] | block args '{' node+ '}'
+///   node   := prim args ['color' vec] ['reflect' arg] | block args '{' (var | node)+ '}'
 ///   args   := (arg | vec)*                as declared in <see cref="SceneDefs"/>
 ///   vec    := '(' expr ',' expr ',' expr ')'
-///   arg    := number | 't' | 'pi' | func '(' expr, ... ')' | '(' expr ')' | '-' arg
+///   arg    := number | 't' | 'pi' | name | func '(' expr, ... ')' | '(' expr ')' | '-' arg
 ///   expr   := term (('+' | '-') term)*
 ///   term   := arg (('*' | '/') arg)*
 ///
@@ -38,6 +39,9 @@ public class SceneParser
     readonly List<Token> tokens;
     int pos;
 
+    // variables of the file and of the open blocks, the innermost last
+    readonly List<Dictionary<string, VarExpr>> scopes = [[]];
+
     SceneParser(string source)
     {
         tokens = SceneLexer.Tokenize(source);
@@ -49,7 +53,14 @@ public class SceneParser
         var nodes = new List<SceneNode>();
         while (parser.Peek.Kind != TokenKind.End)
         {
-            nodes.Add(parser.ParseTopLevelNode());
+            if (parser.IsVar)
+            {
+                parser.ParseVar();
+            }
+            else
+            {
+                nodes.Add(parser.ParseTopLevelNode());
+            }
         }
 
         return nodes;
@@ -71,6 +82,51 @@ public class SceneParser
     }
 
     // Nodes ----------------------------------------------------------------------
+
+    bool IsVar => Peek.Kind == TokenKind.Ident && Peek.Text == "var";
+
+    static bool IsReserved(string name) =>
+        name 
+        is "t" 
+        or "pi" 
+        or "var" 
+        or "color" 
+        or "reflect" 
+        or "limit"
+        || functions.ContainsKey(name)
+        || SceneDefs.Directives.ContainsKey(name)
+        || SceneDefs.Primitives.ContainsKey(name)
+        || SceneDefs.Blocks.ContainsKey(name);
+
+    VarExpr FindVar(string name)
+    {
+        for (int i = scopes.Count - 1; i >= 0; i--)
+        {
+            if (scopes[i].TryGetValue(name, out VarExpr variable))
+                return variable;
+        }
+
+        return null;
+    }
+
+    /// <summary>'var' name '=' expr, defines a variable and gives no node</summary>
+    void ParseVar()
+    {
+        Next();
+
+        Token name = Expect(TokenKind.Ident, "a variable name after 'var'");
+
+        if (IsReserved(name.Text))
+            throw Error(name, $"'{name.Text}' is a reserved word");
+
+        if (FindVar(name.Text) != null)
+            throw Error(name, $"Variable '{name.Text}' is already defined");
+
+        Expect(TokenKind.Equals, $"'=' after '{name.Text}'");
+
+        // defined after its value is parsed: a variable cannot use itself
+        scopes[^1][name.Text] = new VarExpr(ParseExpr());
+    }
 
     /// <summary>A shape or an environment directive, directives are not allowed in blocks</summary>
     SceneNode ParseTopLevelNode()
@@ -174,6 +230,8 @@ public class SceneParser
     {
         Expect(TokenKind.LBrace, $"'{{' after '{owner.Text}'");
 
+        scopes.Add([]);
+
         while (Peek.Kind != TokenKind.RBrace)
         {
             if (Peek.Kind == TokenKind.End)
@@ -181,8 +239,17 @@ public class SceneParser
                 throw Error(Peek, $"Unclosed block of '{owner.Text}'");
             }
 
-            children.Add(ParseNode());
+            if (IsVar)
+            {
+                ParseVar();
+            }
+            else
+            {
+                children.Add(ParseNode());
+            }
         }
+
+        scopes.RemoveAt(scopes.Count - 1);
         
         Next();
 
@@ -248,11 +315,14 @@ public class SceneParser
                 return new NegExpr(ParseArg());
 
             case TokenKind.LParen:
+            {
                 ExprBase inner = ParseExpr();
                 Expect(TokenKind.RParen, "')'");
                 return inner;
+            }
 
             case TokenKind.Ident:
+            {
                 if (token.Text == "t")
                     return new TimeExpr();
 
@@ -262,14 +332,18 @@ public class SceneParser
                 if (functions.TryGetValue(token.Text, out var f))
                     return ParseCall(token, f.arity, f.func);
 
+                if (FindVar(token.Text) is VarExpr variable)
+                    return variable;
+
                 throw Error(token, $"Unknown identifier '{token.Text}'");
+            }
 
             default:
                 throw Error(token, $"Expected a number, found {token}");
         }
     }
 
-    ExprBase ParseCall(
+    CallExpr ParseCall(
         Token name, 
         int arity, 
         Func<float[], float> func)
@@ -286,7 +360,7 @@ public class SceneParser
         Expect(TokenKind.RParen, "')'");
 
         return args.Count == arity
-            ? (ExprBase)new CallExpr(func, [.. args])
+            ? new CallExpr(func, [.. args])
             : throw Error(name, $"'{name.Text}' takes {arity} argument(s), got {args.Count}");
     }
 }

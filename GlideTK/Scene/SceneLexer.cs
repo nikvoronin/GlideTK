@@ -111,6 +111,7 @@ public static class SceneLexer
                     '-' => TokenKind.Minus,
                     '*' => TokenKind.Star,
                     '/' => TokenKind.Slash,
+                    '=' => TokenKind.Equals,
 
                     _ => throw new SceneParseException(
                         $"Unexpected character '{ch}'", 

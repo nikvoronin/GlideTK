@@ -179,6 +179,55 @@ Arguments of an element are separated by spaces, so arithmetic in a separate arg
 
 Comments start with `#` and last to the end of the line.
 
+#### Variables
+
+`var name = expression`,
+
+the whole expression without parentheses (`var wave = sin(t * 2) - 1.0`); then `name` is used like a number: `translate (0, wave, 0) { sphere (1 + wave * 0.1) }`.
+
+A name consists of letters (of any alphabet, e.g. Greek or Cyrillic), digits and `_`. The first character is a letter or `_`, not a digit. Spaces, `-`, `.` and other signs are not allowed. The case matters: `Speed` and `speed` are different variables.
+
+A variable is visible from its definition to the end of the enclosing block (to the end of the file at the top level), is evaluated at the time `t` of every use, and cannot be defined twice or named like a keyword, function, directive, primitive or operation.
+
+### Grammar
+
+The parser is a recursive descent one (`GlideTK/Scene/SceneParser.cs`), the same grammar is in its summary:
+
+```text
+scene     := (var | directive | node)*
+var       := 'var' name '=' expr
+directive := dname args                            top level only
+node      := prim | block
+prim      := pname args ['color' vec] ['reflect' arg]
+block     := bname args ['limit' vec] '{' (var | node)+ '}'     'limit' only after 'repeat'
+args      := (arg | vec)*                          as declared for the element: scalars and vectors
+vec       := '(' expr ',' expr ',' expr ')'
+expr      := term (('+' | '-') term)*
+term      := arg (('*' | '/') arg)*
+arg       := number | 't' | 'pi' | name | func '(' expr (',' expr)* ')' | '(' expr ')' | '-' arg
+
+number    := digit+ ['.' digit*] | '.' digit+      no exponent, the sign is the unary minus
+name      := (letter | '_') (letter | digit | '_')*
+comment   := '#' up to the end of the line
+```
+
+- `dname` is a directive of the [Environment](#environment) table,
+- `pname` a primitive,
+- `bname` a domain, distance or object operation, 
+- `func` a function of [Expressions](#expressions) with a fixed number of arguments, 
+- `name` a variable.
+
+A directive name is looked up first, then a primitive and an operation; `color`, `reflect`, `limit`, `var`, `t`, `pi` and all these names are reserved, a variable cannot take them.
+
+- White space and line breaks only separate tokens, they have no other meaning.
+- The arguments `args` of an element are separated by white space, so every `arg` is a single term: a compound arithmetic argument is written in parentheses, `sphere (1 + 0.2 * sin(t))`.
+
+Inside a vector, a function call, the right side of `var` and parentheses any `expr` is allowed.
+
+- A block has at least one node, a block of variables only is an error.
+- A variable lives from its `var` to the end of the enclosing block.
+- A directive outside the top level, an unknown name, a wrong number of arguments or an unclosed block is a parse error `file(line,column): message`; F5 keeps the previous scene and shows the error.
+
 ### Example
 
 ```text
@@ -195,6 +244,7 @@ translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }
 
 - Oct 20:
     - The `--size WxH` command line option sets the window size.
+    - Variables in the scene language: `var name = expression`, visible to the end of the block.
 - Oct 19:
     - The shader builds in the background at the first start and after F5 with `GL_KHR_parallel_shader_compile`: the window stays alive, keeps drawing the previous scene (black at the first start) and shows `Compiling shader...`.
       Drivers without the extension (Intel Arc) show the caption for one frame and then block while building.

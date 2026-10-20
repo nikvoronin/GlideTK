@@ -3,7 +3,9 @@
 
 bounces 3
 camera (56.2, 1.0, -15.3) (-1, 0, 0)
-sun (sin(t * 0.1) * 60, 19, cos(t * 0.1) * 60)
+
+var slow_t = t * 0.1
+sun (sin(slow_t) * 60, 19, cos(slow_t) * 60)
 
 plane (0, -1, 0) -10 reflect 1
 
@@ -82,6 +84,6 @@ translate (0, 1.5, -16) {
     translate (28, 0, 0) { extrude 0.3 { octahedron 1 } }
     translate (32, 0, 0) { displace 0.1 6 { sphere 1 } }
     translate (36, 0, 0) { mirror (1, 0, 0) { translate (0.8, 0, 0) { sphere 0.5 } } }
-    translate (40, -1, 0) { repeat (sin(t)*1.5, 0, sin(t)*1.5) limit (1, 0, 1) { sphere 0.4 } }
-    translate (44, 0, 0) { rotate (0, sin(t)*180, 30) { box (1, 0.3, 0.6) } }
+    translate (40, -1, 0) { repeat (sin(t) * 1.5, 0, sin(t) * 1.5) limit (1, 0, 1) { sphere 0.4 } }
+    translate (44, 0, 0) { rotate (0, sin(t) * 180, 30) { box (1, 0.3, 0.6) } }
 }
