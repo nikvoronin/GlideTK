@@ -1,18 +1,17 @@
-﻿#version 330 core
+﻿#version 430 core
 
-uniform float iGlobalTime;
-uniform vec3 iResolution;
-uniform vec3 ro;	// camera ray origin
-uniform mat3 camProj;	// camera projection matrix
-uniform int useBvh;	// 0: evaluate every leaf, to compare the speed
-uniform vec3 sun;	// direction to the sun, from the scene (SceneEnvironment)
-uniform vec3 fogColor;	// also the sky
-uniform float fogDensity;
-uniform vec3 sky;	// color of the rays that hit nothing
-uniform vec4 light;	// ambient, specular, shininess, gamma
-uniform vec2 shadows;	// sharpness, max distance (0: no shadows)
-uniform vec3 march;	// max distance, max steps, max shadow steps
-uniform int bounces;	// reflections deep (0..3), 0 turns them off
+layout(location = 0) uniform vec3 iResolution;
+layout(location = 1) uniform vec3 ro;	// camera ray origin
+layout(location = 2) uniform mat3 camProj;	// camera projection matrix
+layout(location = 5) uniform int useBvh;	// 0: evaluate every leaf, to compare the speed
+layout(location = 6) uniform vec3 sun;	// direction to the sun, from the scene (SceneEnvironment)
+layout(location = 7) uniform vec3 fogColor;	// also the sky
+layout(location = 8) uniform float fogDensity;
+layout(location = 9) uniform vec3 sky;	// color of the rays that hit nothing
+layout(location = 10) uniform vec4 light;	// ambient, specular, shininess, gamma
+layout(location = 11) uniform vec2 shadows;	// sharpness, max distance (0: no shadows)
+layout(location = 12) uniform vec3 march;	// max distance, max steps, max shadow steps
+layout(location = 13) uniform int bounces;	// reflections deep (0..3), 0 turns them off
 
 // Compiled scene program, uploaded by Render from SceneState (see Scene/SceneOpcodes.cs).
 // g_map[0] = (materialBase, bvhStart, bvhNodeCount, alwaysCount),
@@ -21,7 +20,7 @@ uniform int bounces;	// reflections deep (0..3), 0 turns them off
 // The leaf programs are not interpreted: SceneGlsl generates a function for every distinct
 // instruction sequence (shape, its id is the w of the first instruction) at the marker line below,
 // the functions read the arguments from g_map by constant offsets.
-uniform SdElements
+layout(std140, binding = 1) uniform SdElements
 {
 	vec4 g_map[1024];	// Const.UBO_SDELEMENTSMAP_BLOCKCOUNT
 };

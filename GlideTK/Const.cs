@@ -12,26 +12,30 @@ public static class Const
     public const string TEXT_VERTEX_FILENAME = "GlideTK.shaders.text_vertex.c";
     public const string TEXT_FRAGMENT_FILENAME = "GlideTK.shaders.text_fragment.c";
 
+    // the oldest OpenGL the application runs on, there is no fallback
+    public const int GL_VERSION_MAJOR = 4;
+    public const int GL_VERSION_MINOR = 3;
+
     public const string SCENE_FILENAME = "scenes/default.scene";
 
     public const string UBO_SDELEMENTSMAP_BLOCKNAME = "SdElements";
     public const int UBO_SDELEMENTSMAP_BLOCKCOUNT = 1024;  // vec4 count, must match g_map[] in fragment.c
     public const int UBO_SDELEMENTSMAP_BINDING = 1;
-    public const string UF_TIMER = "iGlobalTime";
-    public const string UF_RESOLUTION = "iResolution";
-    public const string UF_RAY_ORIGIN = "ro";
-    public const string UF_PROJECTION_MATRIX = "camProj";
-    public const string UF_USE_BVH = "useBvh";
-    public const string UF_SUN = "sun";
-    public const string UF_FOG_COLOR = "fogColor";
-    public const string UF_FOG_DENSITY = "fogDensity";
-    public const string UF_SKY = "sky";
-    public const string UF_LIGHT = "light";
-    public const string UF_SHADOWS = "shadows";
-    public const string UF_MARCH = "march";
-    public const string UF_BOUNCES = "bounces";
-    public const string UF_TEXT_SCREEN_SIZE = "screenSize";
-    public const string UF_TEXT_ATLAS = "atlas";
+    // Explicit uniform locations: layout(location = N) in the shaders must match.
+    // A mat3 takes three locations.
+    public const int UF_LOC_RESOLUTION = 0;         // vertex.c and fragment.c
+    public const int UF_LOC_RAY_ORIGIN = 1;
+    public const int UF_LOC_PROJECTION_MATRIX = 2;  // 2..4
+    public const int UF_LOC_USE_BVH = 5;
+    public const int UF_LOC_SUN = 6;
+    public const int UF_LOC_FOG_COLOR = 7;
+    public const int UF_LOC_FOG_DENSITY = 8;
+    public const int UF_LOC_SKY = 9;
+    public const int UF_LOC_LIGHT = 10;
+    public const int UF_LOC_SHADOWS = 11;
+    public const int UF_LOC_MARCH = 12;
+    public const int UF_LOC_BOUNCES = 13;
+    public const int UF_LOC_TEXT_SCREEN_SIZE = 0;   // text_vertex.c
 
     public const int SCENE_STACK_DEPTH = 8;     // nesting limit, the stacks of the CPU interpreter (SceneVM)
     public const int BVH_STACK_DEPTH = 32;      // must match BVH_STACK_DEPTH in fragment.c

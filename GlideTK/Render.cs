@@ -12,20 +12,7 @@ public class Render
     int h_shaderProgram,
         h_vao;
 
-    int uf_iGlobalTime,
-        uf_iResolution,
-        uf_CamRo,
-        um3_CamProj,
-        uf_UseBvh,
-        uf_Sun,
-        uf_FogColor,
-        uf_FogDensity,
-        uf_Sky,
-        uf_Light,
-        uf_Shadows,
-        uf_March,
-        uf_Bounces,
-        ubo_GlobalMap;
+    int ubo_GlobalMap;
 
     /// <summary>
     /// Skip scene objects by their bounding boxes, off evaluates every object (to compare the speed)
@@ -71,11 +58,6 @@ public class Render
     /// On an error the previous shader keeps running.
     /// </summary>
     public string ShaderError { get; private set; }
-
-    private int GetUniformLocation(string uniformName)
-    {
-        return GL.GetUniformLocation(h_shaderProgram, uniformName);
-    }
 
     private static bool HasExtension(string name)
     {
@@ -147,24 +129,8 @@ public class Render
         builtSceneGlsl = pendingGlsl;
         ShaderError = null;
 
-        GL.UseProgram(h_shaderProgram);
-        BindMapBlock();
         if (ubo_GlobalMap == 0)
             CreateMapUbo();
-
-        uf_iGlobalTime = GetUniformLocation(Const.UF_TIMER);
-        uf_iResolution = GetUniformLocation(Const.UF_RESOLUTION);
-        uf_CamRo = GetUniformLocation(Const.UF_RAY_ORIGIN);
-        um3_CamProj = GetUniformLocation(Const.UF_PROJECTION_MATRIX);
-        uf_UseBvh = GetUniformLocation(Const.UF_USE_BVH);
-        uf_Sun = GetUniformLocation(Const.UF_SUN);
-        uf_FogColor = GetUniformLocation(Const.UF_FOG_COLOR);
-        uf_FogDensity = GetUniformLocation(Const.UF_FOG_DENSITY);
-        uf_Sky = GetUniformLocation(Const.UF_SKY);
-        uf_Light = GetUniformLocation(Const.UF_LIGHT);
-        uf_Shadows = GetUniformLocation(Const.UF_SHADOWS);
-        uf_March = GetUniformLocation(Const.UF_MARCH);
-        uf_Bounces = GetUniformLocation(Const.UF_BOUNCES);
     }
 
     public void Start(SceneState scene)
@@ -181,31 +147,11 @@ public class Render
         GL.Disable(EnableCap.DepthTest);
     }
 
-    private void BindMapBlock()
-    {
-        int block_index = GL.GetUniformBlockIndex(
-            h_shaderProgram, 
-            Const.UBO_SDELEMENTSMAP_BLOCKNAME);
-        GL.UniformBlockBinding(
-            h_shaderProgram, 
-            block_index, 
-            Const.UBO_SDELEMENTSMAP_BINDING);
-    }
-
     private void CreateMapUbo()
     {
-        int block_index = GL.GetUniformBlockIndex(
-            h_shaderProgram, 
-            Const.UBO_SDELEMENTSMAP_BLOCKNAME);
+        // std140: an array of vec4 has no padding, the block is exactly BLOCKCOUNT vec4
+        mapBlockSize = Const.UBO_SDELEMENTSMAP_BLOCKCOUNT * 16;
 
-        // Allocate space for the buffer
-        GL.GetActiveUniformBlock(
-            h_shaderProgram,
-            block_index,
-            ActiveUniformBlockParameter.UniformBlockDataSize,
-            out mapBlockSize);
-
-        // Create the buffer object
         ubo_GlobalMap = GL.GenBuffer();
         GL.BindBuffer(BufferTarget.UniformBuffer, ubo_GlobalMap);
 
@@ -216,8 +162,8 @@ public class Render
             BufferUsageHint.StreamDraw);
 
         GL.BindBufferBase(
-            BufferRangeTarget.UniformBuffer, 
-            Const.UBO_SDELEMENTSMAP_BINDING, 
+            BufferRangeTarget.UniformBuffer,
+            Const.UBO_SDELEMENTSMAP_BINDING,
             ubo_GlobalMap);
         GL.BindBuffer(BufferTarget.UniformBuffer, 0);
     }
@@ -253,7 +199,6 @@ public class Render
     }
 
     internal void OnFrame(
-        float globalTime, 
         int width, 
         int height, 
         Camera camera, 
@@ -287,19 +232,18 @@ public class Render
         GL.UseProgram(h_shaderProgram);
         GL.BindVertexArray(h_vao);
 
-        GL.Uniform1(uf_iGlobalTime, globalTime);
-        GL.Uniform3(uf_iResolution, width, height, 0.0f);
-        GL.Uniform3(uf_CamRo, camera.Origin);
-        GL.UniformMatrix3(um3_CamProj, false, ref camera.Projection);
-        GL.Uniform1(uf_UseBvh, Bvh ? 1 : 0);
-        GL.Uniform3(uf_Sun, scene.Env.Sun);
-        GL.Uniform3(uf_FogColor, scene.Env.FogColor);
-        GL.Uniform1(uf_FogDensity, scene.Env.FogDensity);
-        GL.Uniform3(uf_Sky, scene.Env.Sky);
-        GL.Uniform4(uf_Light, scene.Env.Light);
-        GL.Uniform2(uf_Shadows, scene.Env.Shadows);
-        GL.Uniform3(uf_March, scene.Env.March);
-        GL.Uniform1(uf_Bounces, scene.Env.Bounces);
+        GL.Uniform3(Const.UF_LOC_RESOLUTION, width, height, 0.0f);
+        GL.Uniform3(Const.UF_LOC_RAY_ORIGIN, camera.Origin);
+        GL.UniformMatrix3(Const.UF_LOC_PROJECTION_MATRIX, false, ref camera.Projection);
+        GL.Uniform1(Const.UF_LOC_USE_BVH, Bvh ? 1 : 0);
+        GL.Uniform3(Const.UF_LOC_SUN, scene.Env.Sun);
+        GL.Uniform3(Const.UF_LOC_FOG_COLOR, scene.Env.FogColor);
+        GL.Uniform1(Const.UF_LOC_FOG_DENSITY, scene.Env.FogDensity);
+        GL.Uniform3(Const.UF_LOC_SKY, scene.Env.Sky);
+        GL.Uniform4(Const.UF_LOC_LIGHT, scene.Env.Light);
+        GL.Uniform2(Const.UF_LOC_SHADOWS, scene.Env.Shadows);
+        GL.Uniform3(Const.UF_LOC_MARCH, scene.Env.March);
+        GL.Uniform1(Const.UF_LOC_BOUNCES, scene.Env.Bounces);
 
         // while the new shader builds, the old one keeps the old scene data
         if (scene.ShaderRevision == installedRevision)

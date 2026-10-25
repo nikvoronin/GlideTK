@@ -31,7 +31,12 @@ public class MainWindow : GameWindow
             {
                 Title = Const.APP_NAME,
                 ClientSize = size,
-                APIVersion = new System.Version(3, 3),
+                APIVersion = new System.Version(
+                    Const.GL_VERSION_MAJOR, 
+                    Const.GL_VERSION_MINOR),
+#if DEBUG
+                Flags = ContextFlags.Debug,
+#endif
                 Profile = ContextProfile.Core,
             })
     {
@@ -95,6 +100,7 @@ public class MainWindow : GameWindow
     {
         base.OnLoad();
         CursorState = CursorState.Grabbed;
+        GlDebug.Enable();
         render.Start(scene);
         text.Start();
     }
@@ -172,7 +178,6 @@ public class MainWindow : GameWindow
         }
 
         render.OnFrame(
-            physics.GlobalTime, 
             FramebufferSize.X, 
             FramebufferSize.Y, 
             camera, 

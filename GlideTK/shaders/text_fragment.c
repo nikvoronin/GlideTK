@@ -1,6 +1,6 @@
-#version 330 core
+#version 430 core
 
-uniform sampler2D atlas;	// glyphs in a row, 1 where a pixel is set
+layout(binding = 0) uniform sampler2D atlas;	// glyphs in a row, 1 where a pixel is set
 
 in vec2 texel;
 in vec4 glyphColor;

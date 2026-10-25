@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 
 // A glyph quad per instance, the 4 corners of a triangle strip come from gl_VertexID
 
@@ -6,7 +6,7 @@ layout(location = 0) in vec4 rect;		// x, y of the top left corner, width, heigh
 layout(location = 1) in float glyph;	// glyph index in the atlas
 layout(location = 2) in vec4 color;
 
-uniform vec2 screenSize;
+layout(location = 0) uniform vec2 screenSize;
 
 out vec2 texel;		// position in the font atlas, texels
 out vec4 glyphColor;

@@ -1,7 +1,7 @@
-﻿#version 330 core
+﻿#version 430 core
 
 out vec2 fragCoord;
-uniform vec3 iResolution;
+layout(location = 0) uniform vec3 iResolution;
 
 void main()
 {

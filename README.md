@@ -22,6 +22,7 @@ It supports BVH culling on the GPU and CPU, soft shadows, a bitmap-font HUD, and
 
 - Windows 10/11 x64 builds are on the [Releases](https://github.com/nikvoronin/GLDETK/releases) page: `glidetk_<version>_bin-win64-net10.zip`.
 - It is framework-dependent, so the [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) must be installed.
+- A video driver with OpenGL 4.3 or newer is required (Windows 10/11 with a GPU of 2013 or newer and an up-to-date driver).
 - Unzip and run `GlideTK.exe` for default scene or one of the `run-*.cmd` scripts.
 
 ## Scene language
@@ -276,6 +277,7 @@ translate (5, 1, 0) { twist (sin(t)) { round 0.1 { box (0.5, 1, 0.5) } } }
 ### 2026
 
 - Oct 20:
+    - OpenGL 4.3 is required, 3.3 is no longer supported: explicit uniform locations and bindings in the shaders, `KHR_debug` messages in the debug output, a message box when the context is not available.
     - The `--size WxH` command line option sets the window size.
     - Variables in the scene language: `var name = expression`, visible to the end of the block.
     - Vectors in the scene language: vector variables, arithmetic by components, components `.x .y .z` (`.r .g .b`), functions `length`, `dot`, `normalize`, `cross` and `mix`.

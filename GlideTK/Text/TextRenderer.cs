@@ -24,21 +24,13 @@ public sealed class TextRenderer
     int h_program,
         h_vao,
         h_vbo,
-        h_atlas,
-        uf_ScreenSize;
+        h_atlas;
 
     public void Start()
     {
         h_program = ShaderLoader.LinkProgram(
             Const.TEXT_VERTEX_FILENAME, 
             Const.TEXT_FRAGMENT_FILENAME);
-        uf_ScreenSize = GL.GetUniformLocation(
-            h_program, 
-            Const.UF_TEXT_SCREEN_SIZE);
-
-        GL.UseProgram(h_program);
-        GL.Uniform1(GL.GetUniformLocation(h_program, Const.UF_TEXT_ATLAS), 0);     // texture unit 0
-        GL.UseProgram(0);
 
         CreateAtlas();
 
@@ -228,7 +220,7 @@ public sealed class TextRenderer
         glyphs.Clear();
 
         GL.UseProgram(h_program);
-        GL.Uniform2(uf_ScreenSize, (float)width, (float)height);
+        GL.Uniform2(Const.UF_LOC_TEXT_SCREEN_SIZE, (float)width, (float)height);
 
         GL.BindVertexArray(h_vao);
         GL.BindBuffer(BufferTarget.ArrayBuffer, h_vbo);
