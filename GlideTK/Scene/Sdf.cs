@@ -5,7 +5,7 @@ namespace GlideTK.Scene;
 
 /// <summary>
 /// Signed distance functions from https://iquilezles.org/articles/distfunctions/.
-/// Mirror of the sd* functions in shaders/fragment.c: keep the formulas identical,
+/// Mirror of the sd* functions in shaders/trace.c: keep the formulas identical,
 /// the physics and the picture must agree.
 /// </summary>
 public static class Sdf

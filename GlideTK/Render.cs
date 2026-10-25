@@ -9,18 +9,37 @@ namespace GlideTK;
 
 public class Render
 {
-    int h_shaderProgram,
-        h_vao;
+    int h_shaderProgram,    // trace.c, built for the scene
+        h_cullProgram;      // cull.c
 
-    int ubo_GlobalMap;
+    int ubo_GlobalMap,
+        ssbo_TileLists,
+        tex_Output,
+        fbo_Output;         // the read side of the blit to the window
+
+    // the size the output picture and the tile lists were made for
+    int targetWidth, targetHeight;
 
     /// <summary>
     /// Skip scene objects by their bounding boxes, off evaluates every object (to compare the speed)
     /// </summary>
     public bool Bvh { get; set; } = true;
 
+    /// <summary>
+    /// Trace through the lists of leaves that matter for every tile (cull.c),
+    /// off walks the whole BVH for every step (to compare the speed)
+    /// </summary>
+    public bool Tiles { get; set; } = true;
+
+    /// <summary>
+    /// The last frame was traced with the tile lists: <see cref="Tiles"/> is on
+    /// and the scene has enough objects for them to pay off
+    /// </summary>
+    public bool TilesUsed { get; private set; }
+
     int mapBlockSize;
     int uploadedSceneVersion = -1;
+    int uploadedNodeCount;
 
     // the scene revision the running shader was built for,
     // the scene data is uploaded only when it matches the shader
@@ -77,7 +96,7 @@ public class Render
     }
 
     /// <summary>
-    /// Generates the scene functions of the fragment shader and starts building the program,
+    /// Generates the scene functions of the trace shader and starts building the program,
     /// nothing changes when the generated code is the same as in the running shader.
     /// Without the parallel compile the program is installed right here.
     /// </summary>
@@ -90,9 +109,8 @@ public class Render
             return;
         }
 
-        pending = ShaderLoader.BeginLink(
-            Const.VERTEX_FILENAME,
-            Const.FRAGMENT_FILENAME,
+        pending = ShaderLoader.BeginComputeLink(
+            Const.TRACE_FILENAME,
             source => SceneGlsl.Inject(source, scene.Shapes));
         pendingRevision = scene.ShaderRevision;
         pendingGlsl = sceneGlsl;
@@ -139,10 +157,7 @@ public class Render
         if (asyncCompile)
             GL.Khr.MaxShaderCompilerThreads(uint.MaxValue);
 
-        // core profile requires a bound VAO,
-        // the fullscreen triangle is built from gl_VertexID
-        h_vao = GL.GenVertexArray();
-        GL.BindVertexArray(h_vao);
+        h_cullProgram = ShaderLoader.LinkCompute(Const.CULL_FILENAME);
 
         GL.Disable(EnableCap.DepthTest);
     }
@@ -191,6 +206,67 @@ public class Render
         GL.BindBuffer(BufferTarget.UniformBuffer, 0);
 
         uploadedSceneVersion = scene.Version;
+        uploadedNodeCount = (int)scene.Data[0].Z;
+    }
+
+    static int TilesAcross(int pixels) =>
+        (pixels + Const.TILE_SIZE - 1) / Const.TILE_SIZE;
+
+    /// <summary>
+    /// The output picture and the tile lists follow the size of the window
+    /// </summary>
+    private void EnsureTarget(int width, int height)
+    {
+        if (width == targetWidth 
+            && height == targetHeight)
+        {
+            return;
+        }
+
+        if (tex_Output != 0)
+        {
+            GL.DeleteTexture(tex_Output);
+            GL.DeleteFramebuffer(fbo_Output);
+            GL.DeleteBuffer(ssbo_TileLists);
+        }
+
+        tex_Output = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2D, tex_Output);
+        GL.TexStorage2D(
+            TextureTarget2d.Texture2D, 
+            1, 
+            SizedInternalFormat.Rgba8, 
+            width, 
+            height);
+        GL.BindTexture(TextureTarget.Texture2D, 0);
+
+        fbo_Output = GL.GenFramebuffer();
+        GL.GetInteger(GetPName.ReadFramebufferBinding, out int readBinding);
+        GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, fbo_Output);
+        GL.FramebufferTexture2D(
+            FramebufferTarget.ReadFramebuffer,
+            FramebufferAttachment.ColorAttachment0,
+            TextureTarget.Texture2D,
+            tex_Output,
+            0);
+        GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, readBinding);
+
+        int tiles = TilesAcross(width) * TilesAcross(height);
+        ssbo_TileLists = GL.GenBuffer();
+        GL.BindBuffer(BufferTarget.ShaderStorageBuffer, ssbo_TileLists);
+        GL.BufferData(
+            BufferTarget.ShaderStorageBuffer,
+            tiles * Const.TILE_STRIDE * sizeof(int),
+            IntPtr.Zero,
+            BufferUsageHint.DynamicCopy);
+        GL.BindBufferBase(
+            BufferRangeTarget.ShaderStorageBuffer,
+            Const.TILE_LISTS_BINDING,
+            ssbo_TileLists);
+        GL.BindBuffer(BufferTarget.ShaderStorageBuffer, 0);
+
+        targetWidth = width;
+        targetHeight = height;
     }
 
     internal void OnResize(int width, int height)
@@ -204,17 +280,26 @@ public class Render
         Camera camera, 
         SceneState scene)
     {
-        if (pending != null && (!asyncCompile || ShaderLoader.IsDone(pending.Value)))
+        if (pending != null
+            && (!asyncCompile 
+                || ShaderLoader.IsDone(pending.Value)))
+        {
             FinishBuild();
-        if (pending == null && scene.ShaderRevision != installedRevision)
+        }
+
+        if (pending == null 
+            && scene.ShaderRevision != installedRevision)
         {
             // a blocking build freezes the window: draw the caption frame first
-            if (!announced && !asyncCompile && NeedsBuild(scene))
+            if (!announced 
+                && !asyncCompile 
+                && NeedsBuild(scene))
             {
                 announced = true;
                 announceWatch.Restart();
             }
-            else if (!announced || announceWatch.Elapsed.TotalSeconds >= ANNOUNCE_SECONDS)
+            else if (!announced 
+                || announceWatch.Elapsed.TotalSeconds >= ANNOUNCE_SECONDS)
             {
                 announced = false;
                 StartBuild(scene);
@@ -222,16 +307,41 @@ public class Render
         }
 
         // nothing to draw until the first shader is built
-        if (h_shaderProgram == 0)
+        if (h_shaderProgram == 0 
+            || width <= 0 
+            || height <= 0)
         {
             GL.ClearColor(0f, 0f, 0f, 1f);
             GL.Clear(ClearBufferMask.ColorBufferBit);
             return;
         }
 
-        GL.UseProgram(h_shaderProgram);
-        GL.BindVertexArray(h_vao);
+        EnsureTarget(width, height);
 
+        // while the new shader builds, the old one keeps the old scene data
+        if (scene.ShaderRevision == installedRevision)
+            UploadScene(scene);
+
+        int tilesX = TilesAcross(width);
+        int tilesY = TilesAcross(height);
+
+        // the leaves that matter for every tile
+        TilesUsed = Tiles && uploadedNodeCount >= Const.TILE_MIN_NODES;
+        if (TilesUsed)
+        {
+            GL.UseProgram(h_cullProgram);
+            GL.Uniform3(Const.UF_LOC_RESOLUTION, width, height, 0.0f);
+            GL.Uniform3(Const.UF_LOC_RAY_ORIGIN, camera.Origin);
+            GL.UniformMatrix3(Const.UF_LOC_PROJECTION_MATRIX, false, ref camera.Projection);
+            GL.Uniform3(Const.UF_LOC_SUN, scene.Env.Sun);
+            GL.Uniform2(Const.UF_LOC_SHADOWS, scene.Env.Shadows);
+            GL.Uniform3(Const.UF_LOC_MARCH, scene.Env.March);
+            GL.DispatchCompute(tilesX, tilesY, 1);
+            GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
+        }
+
+        // the picture
+        GL.UseProgram(h_shaderProgram);
         GL.Uniform3(Const.UF_LOC_RESOLUTION, width, height, 0.0f);
         GL.Uniform3(Const.UF_LOC_RAY_ORIGIN, camera.Origin);
         GL.UniformMatrix3(Const.UF_LOC_PROJECTION_MATRIX, false, ref camera.Projection);
@@ -244,22 +354,45 @@ public class Render
         GL.Uniform2(Const.UF_LOC_SHADOWS, scene.Env.Shadows);
         GL.Uniform3(Const.UF_LOC_MARCH, scene.Env.March);
         GL.Uniform1(Const.UF_LOC_BOUNCES, scene.Env.Bounces);
+        GL.Uniform1(Const.UF_LOC_TILES, TilesUsed ? 1 : 0);
+        GL.BindImageTexture(
+            Const.OUTPUT_IMAGE_BINDING,
+            tex_Output,
+            0,
+            false,
+            0,
+            TextureAccess.WriteOnly,
+            SizedInternalFormat.Rgba8);
+        GL.DispatchCompute(tilesX, tilesY, 1);
+        GL.MemoryBarrier(
+            MemoryBarrierFlags.FramebufferBarrierBit 
+            | MemoryBarrierFlags.TextureFetchBarrierBit);
 
-        // while the new shader builds, the old one keeps the old scene data
-        if (scene.ShaderRevision == installedRevision)
-            UploadScene(scene);
-
-        GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
+        // to the framebuffer being drawn: the window, or the one of a test
+        GL.GetInteger(GetPName.ReadFramebufferBinding, out int readBinding);
+        GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, fbo_Output);
+        GL.BlitFramebuffer(
+            0, 0, width, height,
+            0, 0, width, height,
+            ClearBufferMask.ColorBufferBit,
+            BlitFramebufferFilter.Nearest);
+        GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, readBinding);
 
         GL.UseProgram(0);
     }
 
     internal void Stop()
     {
-        GL.DeleteVertexArray(h_vao);
+        GL.DeleteTexture(tex_Output);
+        GL.DeleteFramebuffer(fbo_Output);
+        GL.DeleteBuffer(ssbo_TileLists);
+        GL.DeleteProgram(h_cullProgram);
         GL.DeleteBuffer(ubo_GlobalMap);
         GL.DeleteProgram(h_shaderProgram);
+
         if (pending != null)
+        {
             GL.DeleteProgram(pending.Value.Program);
+        }
     }
 }

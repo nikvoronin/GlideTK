@@ -5,7 +5,7 @@ using System;
 namespace GlideTK.Scene;
 
 /// <summary>
-/// CPU interpreter of a compiled scene program. Mirror of map() in shaders/fragment.c 
+/// CPU interpreter of a compiled scene program. Mirror of map() in shaders/trace.c 
 /// and of the generated shape functions (Glsl/GlslOps.cs): 
 /// any change here must be repeated there.
 /// </summary>

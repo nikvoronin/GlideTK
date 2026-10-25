@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="shaders\fragment.c;shaders\vertex.c;shaders\text_vertex.c;shaders\text_fragment.c" />
+    <EmbeddedResource Include="shaders\trace.c;shaders\cull.c;shaders\text_vertex.c;shaders\text_fragment.c" />
     <None Include="scenes\*.scene" CopyToOutputDirectory="PreserveNewest" />
     <None Include="scripts\run-*.cmd" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" />
   </ItemGroup>

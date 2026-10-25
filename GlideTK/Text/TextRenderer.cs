@@ -66,6 +66,7 @@ public sealed class TextRenderer
         var pixels = new byte[width * size];
 
         for (int glyph = 0; glyph < Font8x8.COUNT; glyph++)
+        {
             for (int row = 0; row < size; row++)
             {
                 byte bits = Font8x8.Glyphs[glyph * size + row];
@@ -73,6 +74,7 @@ public sealed class TextRenderer
                     if ((bits >> bit & 1) != 0)
                         pixels[row * width + glyph * size + bit] = 255;
             }
+        }
 
         h_atlas = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2D, h_atlas);

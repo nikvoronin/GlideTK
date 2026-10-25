@@ -10,7 +10,10 @@ namespace GlideTK;
 /// </summary>
 public static class ShaderLoader
 {
-    /// <summary>A program that is compiling and linking, perhaps in the driver threads</summary>
+    /// <summary>
+    /// A program that is compiling and linking, perhaps in the driver threads.
+    /// A compute program has no vertex shader (0), its shader is the Fragment one.
+    /// </summary>
     public readonly record struct PendingProgram(
         int Program,
         int Vertex,
@@ -89,6 +92,23 @@ public static class ShaderLoader
     }
 
     /// <summary>
+    /// Starts compiling and linking a program of one compute shader,
+    /// like <see cref="BeginLink"/>
+    /// </summary>
+    public static PendingProgram BeginComputeLink(
+        string filename,
+        Func<string, string> patch = null)
+    {
+        int h_shader = StartShader(ShaderType.ComputeShader, filename, patch);
+
+        int h_program = GL.CreateProgram();
+        GL.AttachShader(h_program, h_shader);
+        GL.LinkProgram(h_program);
+
+        return new PendingProgram(h_program, 0, h_shader, null, filename);
+    }
+
+    /// <summary>
     /// The driver has finished compiling and linking (needs GL_KHR_parallel_shader_compile)
     /// </summary>
     public static bool IsDone(PendingProgram pending)
@@ -109,7 +129,9 @@ public static class ShaderLoader
     /// <exception cref="InvalidOperationException">Compile or link error</exception>
     public static int FinishLink(PendingProgram pending)
     {
-        string error = CompileError(pending.Vertex, pending.VertexFilename)
+        string error = (pending.Vertex != 0 
+            ? CompileError(pending.Vertex, pending.VertexFilename) 
+            : null)
             ?? CompileError(pending.Fragment, pending.FragmentFilename);
 
         if (error == null)
@@ -122,10 +144,14 @@ public static class ShaderLoader
             }
         }
 
-        GL.DetachShader(pending.Program, pending.Vertex);
-        GL.DeleteShader(pending.Vertex);
-        GL.DetachShader(pending.Program, pending.Fragment);
-        GL.DeleteShader(pending.Fragment);
+        foreach (int shader in new[] { pending.Vertex, pending.Fragment })
+        {
+            if (shader == 0)
+                continue;
+
+            GL.DetachShader(pending.Program, shader);
+            GL.DeleteShader(shader);
+        }
 
         if (error != null)
         {
@@ -146,4 +172,12 @@ public static class ShaderLoader
         string fragmentFilename,
         Func<string, string> patchFragment = null)
         => FinishLink(BeginLink(vertexFilename, fragmentFilename, patchFragment));
+
+    /// <summary>
+    /// Links a program of one compute shader and waits for it
+    /// </summary>
+    public static int LinkCompute(
+        string filename,
+        Func<string, string> patch = null)
+        => FinishLink(BeginComputeLink(filename, patch));
 }

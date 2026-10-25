@@ -125,6 +125,9 @@ public class MainWindow : GameWindow
         if (keyboard.IsKeyPressed(Const.INPUT_KEY_TOGGLE_BVH))
             render.Bvh = !render.Bvh;
 
+        if (keyboard.IsKeyPressed(Const.INPUT_KEY_TOGGLE_TILES))
+            render.Tiles = !render.Tiles;
+
         if (keyboard.IsKeyPressed(Const.INPUT_KEY_TOGGLE_GRAVITY))
             physics.Gravity = !physics.Gravity;
 
@@ -153,6 +156,7 @@ public class MainWindow : GameWindow
         "F1     this help\n" +
         "F5     reload the scene\n" +
         "F7     BVH on/off\n" +
+        "F8     tiles on/off\n" +
         "F11    fullscreen\n" +
         "Esc    exit";
 
@@ -200,8 +204,11 @@ public class MainWindow : GameWindow
         Vector3 pos = camera.Origin;
         var stats =
             $"{fps:0} fps  {frameMs:0.0} ms\n" +
-            $"{pos.X:0.0} {pos.Y:0.0} {pos.Z:0.0}{(physics.Grounded ? "" : "  in the air")}\n" +
-            $"{scene.FileName}  BVH {(render.Bvh ? "on" : "off")}\n" +
+            $"{pos.X:0.0} {pos.Y:0.0} {pos.Z:0.0}" +
+                $"{(physics.Grounded ? "" : "  in the air")}\n" +
+            $"{scene.FileName}  " +
+                $"BVH {(render.Bvh ? "on" : "off")}  " +
+                $"tiles {(render.Tiles ? (render.TilesUsed ? "on" : "idle") : "off")}\n" +
             "F1 help";
 
         var at = new Vector2(HUD_MARGIN, HUD_MARGIN);

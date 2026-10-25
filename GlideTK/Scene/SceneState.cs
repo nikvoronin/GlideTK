@@ -28,7 +28,7 @@ public class SceneState
     public SceneEnvironment Env { get; private set; } = SceneEnvironment.Evaluate([], 0f);
 
     /// <summary>Shapes of the scene leaves, 
-    /// the fragment shader is generated from them</summary>
+    /// the trace shader is generated from them</summary>
     public SceneShapes Shapes { get; private set; } = new();
 
     /// <summary>
