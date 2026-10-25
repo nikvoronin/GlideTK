@@ -15,7 +15,7 @@ namespace GlideTK.Scene.Glsl;
 public static class SceneGlsl
 {
     /// <summary>
-    /// The line of shaders/fragment.c replaced with the generated code
+    /// The line of shaders/trace.c replaced with the generated code
     /// </summary>
     public const string MARKER = "//@SCENE_SHAPES";
 

@@ -1,18 +1,22 @@
-﻿#version 330 core
+﻿#version 430 core
 
-uniform float iGlobalTime;
-uniform vec3 iResolution;
-uniform vec3 ro;	// camera ray origin
-uniform mat3 camProj;	// camera projection matrix
-uniform int useBvh;	// 0: evaluate every leaf, to compare the speed
-uniform vec3 sun;	// direction to the sun, from the scene (SceneEnvironment)
-uniform vec3 fogColor;	// also the sky
-uniform float fogDensity;
-uniform vec3 sky;	// color of the rays that hit nothing
-uniform vec4 light;	// ambient, specular, shininess, gamma
-uniform vec2 shadows;	// sharpness, max distance (0: no shadows)
-uniform vec3 march;	// max distance, max steps, max shadow steps
-uniform int bounces;	// reflections deep (0..3), 0 turns them off
+// A work group renders one tile of the picture, cull.c lists the leaves that matter for the tile
+layout(local_size_x = 8, local_size_y = 8) in;	// Const.TILE_SIZE
+layout(rgba8, binding = 0) writeonly uniform image2D outImage;
+
+layout(location = 0) uniform vec3 iResolution;
+layout(location = 1) uniform vec3 ro;	// camera ray origin
+layout(location = 2) uniform mat3 camProj;	// camera projection matrix
+layout(location = 5) uniform int useBvh;	// 0: evaluate every leaf, to compare the speed
+layout(location = 6) uniform vec3 sun;	// direction to the sun, from the scene (SceneEnvironment)
+layout(location = 7) uniform vec3 fogColor;	// also the sky
+layout(location = 8) uniform float fogDensity;
+layout(location = 9) uniform vec3 sky;	// color of the rays that hit nothing
+layout(location = 10) uniform vec4 light;	// ambient, specular, shininess, gamma
+layout(location = 11) uniform vec2 shadows;	// sharpness, max distance (0: no shadows)
+layout(location = 12) uniform vec3 march;	// max distance, max steps, max shadow steps
+layout(location = 13) uniform int bounces;	// reflections deep (0..3), 0 turns them off
+layout(location = 14) uniform int tilesOn;	// 0: every ray walks the whole BVH, to compare the speed
 
 // Compiled scene program, uploaded by Render from SceneState (see Scene/SceneOpcodes.cs).
 // g_map[0] = (materialBase, bvhStart, bvhNodeCount, alwaysCount),
@@ -21,13 +25,22 @@ uniform int bounces;	// reflections deep (0..3), 0 turns them off
 // The leaf programs are not interpreted: SceneGlsl generates a function for every distinct
 // instruction sequence (shape, its id is the w of the first instruction) at the marker line below,
 // the functions read the arguments from g_map by constant offsets.
-uniform SdElements
+layout(std140, binding = 1) uniform SdElements
 {
 	vec4 g_map[1024];	// Const.UBO_SDELEMENTSMAP_BLOCKCOUNT
 };
 
-in vec2 fragCoord;
-out vec4 fragColor;
+// The leaves that can matter for a tile, written by cull.c. A tile takes TILE_STRIDE ints:
+// [0] the count for the primary rays (-1: too many, use the whole BVH) and TILE_LIST BVH node indices,
+// [TILE_LIST + 1] the same for the shadow rays.
+layout(std430, binding = 2) readonly buffer TileLists
+{
+	int tileData[];
+};
+
+#define TILE_SIZE 8	// Const.TILE_SIZE
+#define TILE_LIST 64	// Const.TILE_LIST
+#define TILE_STRIDE (2 * TILE_LIST + 2)
 
 #define BVH_STACK_DEPTH 32	// Const.BVH_STACK_DEPTH
 #define EMPTY_DISTANCE 1e10
@@ -458,6 +471,10 @@ float nodeDistance(int bvh, int node, vec3 p)
 	return boxDistance(p, g_map[bvh + 2 * node].xyz, g_map[bvh + 2 * node + 1].xyz);
 }
 
+// The leaves map() looks at: 0 the whole BVH, 1 the primary list of the tile, 2 its shadow list
+int mapMode = 0;
+int tileBase = 0;	// first int of the tile in tileData
+
 // Scene distance, mirror of SceneVM.Eval. Returns (distance, material id).
 vec2 map(in vec3 pos)
 {
@@ -466,6 +483,26 @@ vec2 map(in vec3 pos)
 
 	int bvh = int(g_map[0].y);
 	int nodeCount = int(g_map[0].z);
+
+	// the leaves that can matter for this tile only: the others are never hit by its rays
+	if (mapMode != 0 && useBvh != 0 && tilesOn != 0)
+	{
+		int base = tileBase + (mapMode == 1 ? 0 : TILE_LIST + 1);
+		int count = tileData[base];
+		if (count >= 0)
+		{
+			for (int i = 1; i <= count; i++)
+			{
+				int node = tileData[base + i];
+				vec4 lo = g_map[bvh + 2 * node];
+				vec4 hi = g_map[bvh + 2 * node + 1];
+				if (mayContribute(boxDistance(pos, lo.xyz, hi.xyz), best.x))
+					best = opUnion(best, evalLeaf(int(-lo.w), pos));
+			}
+
+			return best;
+		}
+	}
 
 	if (useBvh == 0)
 	{
@@ -616,7 +653,13 @@ vec3 shade(in vec3 rd, in vec3 pos, in vec3 nor, in float t, in float material, 
 	float spe = pow(clamp(dot(ref, lig), 0.0, 1.0), light.z);
 
 	if (shadows.y > 0.0)
+	{
+		int mode = mapMode;
+		if (mode == 1)
+			mapMode = 2;	// shadow rays use the shadow list of the tile
 		dif *= softshadow(pos, lig, shadowSteps);
+		mapMode = mode;
+	}
 
 	vec3 lin = vec3(0.0);
 	lin += dif;
@@ -638,6 +681,7 @@ vec3 render(in vec3 ro, in vec3 rd)
 
 	for (int bounce = 0; bounce <= 3; bounce++)
 	{
+		mapMode = bounce == 0 ? 1 : 0;	// the primary ray and its normal use the list of the tile
 		vec2 res = castRay(ro, rd);
 		float t = res.x;
 		if (t > march.x)
@@ -668,8 +712,15 @@ vec3 render(in vec3 ro, in vec3 rd)
 
 void main(void)
 {
-	// ray direction
-	vec2 q = fragCoord.xy / iResolution.xy;
+	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
+	if (pix.x >= int(iResolution.x) || pix.y >= int(iResolution.y))
+		return;
+
+	ivec2 tilesCount = (ivec2(iResolution.xy) + TILE_SIZE - 1) / TILE_SIZE;
+	tileBase = (int(gl_WorkGroupID.y) * tilesCount.x + int(gl_WorkGroupID.x)) * TILE_STRIDE;
+
+	// ray direction, the same as pixelRay in cull.c
+	vec2 q = (vec2(pix) + 0.5) / iResolution.xy;
 	vec2 p = -1.0 + 2.0 * q;
 	p.x *= iResolution.x / iResolution.y;
 	vec3 rd = camProj * normalize(vec3(p.xy, 2.0));
@@ -677,5 +728,5 @@ void main(void)
 	vec3 col = render(ro, rd);
 
 	col = pow(col, vec3(light.w)); // gamma
-	fragColor = vec4(col, 1.0);
+	imageStore(outImage, pix, vec4(col, 1.0));
 }

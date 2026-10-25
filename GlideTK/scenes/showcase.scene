@@ -7,7 +7,7 @@ camera (56.2, 1.0, -15.3) (-1, 0, 0)
 var slow_t = t * 0.1
 sun (sin(slow_t) * 60, 19, cos(slow_t) * 60)
 
-plane (0, -1, 0) -10 reflect 1
+# plane (0, -1, 0) -10 reflect 1
 
 smooth 1 {
 	plane (0, 1, 0) 0
